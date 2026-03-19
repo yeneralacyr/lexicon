@@ -1,9 +1,22 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
 import { getDatabase } from '@/db';
-import { getAppOverviewQuery, getStudySettings, updateStudySettingsQuery } from '@/db/queries';
-import type { AppOverview, StudySettings } from '@/types/db';
+import {
+  ensureDefaultSettings,
+  getAppOverviewQuery,
+  getStudySettings,
+  updateStudySettingsQuery,
+} from '@/db/queries';
+import type { AppOverview, ProgressExportPayload, SqliteExportRow, StudySettings } from '@/types/db';
 import type { Rating, WordProgressRecord, WordStatus } from '@/types/progress';
 import type { WordCandidate } from '@/types/word';
 import { nowIso, plusDaysIso, todayIso } from '@/utils/dates';
+
+type DailyStatsInput = {
+  isNew: boolean;
+  rating: Rating;
+  durationMs: number;
+};
 
 export async function getAppOverviewRepository(): Promise<AppOverview> {
   const db = await getDatabase();
@@ -22,10 +35,26 @@ export async function updateStudySettingsRepository(updates: Partial<StudySettin
 
 export async function getDueWordCandidatesRepository(limit: number): Promise<WordCandidate[]> {
   const db = await getDatabase();
-
-  return db.getAllAsync<WordCandidate>(
+  const rows = await db.getAllAsync<{
+    id: number;
+    english: string;
+    turkish: string;
+    sentence1: string | null;
+    sentence2: string | null;
+    sentence3: string | null;
+    sentence4: string | null;
+    sentence5: string | null;
+  }>(
     `
-      SELECT w.id, w.english, w.turkish, w.sentence1 as sentence
+      SELECT
+        w.id,
+        w.english,
+        w.turkish,
+        w.sentence1,
+        w.sentence2,
+        w.sentence3,
+        w.sentence4,
+        w.sentence5
       FROM word_progress p
       INNER JOIN words w ON w.id = p.word_id
       WHERE p.next_due_at IS NOT NULL
@@ -37,9 +66,18 @@ export async function getDueWordCandidatesRepository(limit: number): Promise<Wor
     todayIso(),
     limit
   );
+
+  return rows.map((row) => ({
+    id: row.id,
+    english: row.english,
+    turkish: row.turkish,
+    sentences: [row.sentence1, row.sentence2, row.sentence3, row.sentence4, row.sentence5].filter(
+      (sentence): sentence is string => Boolean(sentence)
+    ),
+  }));
 }
 
-async function getWordProgressRow(db: Awaited<ReturnType<typeof getDatabase>>, wordId: number) {
+async function getWordProgressRow(db: SQLiteDatabase, wordId: number) {
   return db.getFirstAsync<{
     word_id: number;
     status: WordStatus;
@@ -100,8 +138,11 @@ function nextStatus(currentStatus: WordStatus | undefined, rating: Rating, repet
   return currentStatus ?? 'new';
 }
 
-export async function applyWordRatingRepository(wordId: number, rating: Rating): Promise<WordProgressRecord> {
-  const db = await getDatabase();
+export async function applyWordRatingOnDatabase(
+  db: SQLiteDatabase,
+  wordId: number,
+  rating: Rating
+): Promise<{ record: WordProgressRecord; wasNew: boolean }> {
   const current = await getWordProgressRow(db, wordId);
   const now = nowIso();
   const repetitions = rating === 'again' ? 0 : (current?.repetitions ?? 0) + 1;
@@ -116,6 +157,7 @@ export async function applyWordRatingRepository(wordId: number, rating: Rating):
         ? Math.max(0, (current?.mastery_level ?? 0) - 1)
         : current?.mastery_level ?? 0;
   const nextDueAt = plusDaysIso(intervalDays);
+  const wasNew = !current || current.status === 'new';
 
   await db.runAsync(
     `
@@ -174,22 +216,31 @@ export async function applyWordRatingRepository(wordId: number, rating: Rating):
   );
 
   return {
-    wordId,
-    status,
-    masteryLevel,
-    easeFactor: current?.ease_factor ?? 2.5,
-    intervalDays,
-    repetitions,
-    lapses: (current?.lapses ?? 0) + wrongIncrement,
-    seenCount: (current?.seen_count ?? 0) + 1,
-    correctCount: (current?.correct_count ?? 0) + correctIncrement,
-    wrongCount: (current?.wrong_count ?? 0) + wrongIncrement,
-    lastSeenAt: now,
-    lastReviewedAt: now,
-    nextDueAt,
-    isFavorite: Boolean(current?.is_favorite ?? 0),
-    isSuspended: Boolean(current?.is_suspended ?? 0),
+    wasNew,
+    record: {
+      wordId,
+      status,
+      masteryLevel,
+      easeFactor: current?.ease_factor ?? 2.5,
+      intervalDays,
+      repetitions,
+      lapses: (current?.lapses ?? 0) + wrongIncrement,
+      seenCount: (current?.seen_count ?? 0) + 1,
+      correctCount: (current?.correct_count ?? 0) + correctIncrement,
+      wrongCount: (current?.wrong_count ?? 0) + wrongIncrement,
+      lastSeenAt: now,
+      lastReviewedAt: now,
+      nextDueAt,
+      isFavorite: Boolean(current?.is_favorite ?? 0),
+      isSuspended: Boolean(current?.is_suspended ?? 0),
+    },
   };
+}
+
+export async function applyWordRatingRepository(wordId: number, rating: Rating): Promise<WordProgressRecord> {
+  const db = await getDatabase();
+  const result = await applyWordRatingOnDatabase(db, wordId, rating);
+  return result.record;
 }
 
 export async function toggleFavoriteRepository(wordId: number) {
@@ -327,4 +378,90 @@ export async function pushWordToReviewRepository(wordId: number) {
     0,
     now
   );
+}
+
+export async function recordDailyStatsOnDatabase(db: SQLiteDatabase, input: DailyStatsInput) {
+  const correctIncrement = input.rating === 'again' ? 0 : 1;
+  const wrongIncrement = input.rating === 'again' ? 1 : 0;
+  const reviewedIncrement = input.isNew ? 0 : 1;
+  const newIncrement = input.isNew ? 1 : 0;
+  const studiedSeconds = Math.max(0, Math.round(input.durationMs / 1000));
+
+  await db.runAsync(
+    `
+      INSERT INTO daily_stats (
+        date,
+        reviewed_count,
+        new_count,
+        correct_count,
+        wrong_count,
+        studied_seconds
+      )
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(date) DO UPDATE SET
+        reviewed_count = reviewed_count + excluded.reviewed_count,
+        new_count = new_count + excluded.new_count,
+        correct_count = correct_count + excluded.correct_count,
+        wrong_count = wrong_count + excluded.wrong_count,
+        studied_seconds = studied_seconds + excluded.studied_seconds
+    `,
+    todayIso(),
+    reviewedIncrement,
+    newIncrement,
+    correctIncrement,
+    wrongIncrement,
+    studiedSeconds
+  );
+}
+
+export async function recordDailyStatsRepository(input: DailyStatsInput) {
+  const db = await getDatabase();
+  await recordDailyStatsOnDatabase(db, input);
+}
+
+async function readTableRows(db: SQLiteDatabase, tableName: string): Promise<SqliteExportRow[]> {
+  return db.getAllAsync<SqliteExportRow>(`SELECT * FROM ${tableName}`);
+}
+
+export async function exportProgressSnapshotRepository(): Promise<ProgressExportPayload> {
+  const db = await getDatabase();
+
+  return {
+    generatedAt: nowIso(),
+    appMeta: await readTableRows(db, 'app_meta'),
+    appSettings: await readTableRows(db, 'app_settings'),
+    wordProgress: await readTableRows(db, 'word_progress'),
+    sessions: await readTableRows(db, 'sessions'),
+    sessionItems: await readTableRows(db, 'session_items'),
+    dailyStats: await readTableRows(db, 'daily_stats'),
+  };
+}
+
+export async function resetUserDataRepository(): Promise<StudySettings> {
+  const db = await getDatabase();
+
+  await db.execAsync('BEGIN');
+
+  try {
+    await db.runAsync('DELETE FROM sessions');
+    await db.runAsync('DELETE FROM word_progress');
+    await db.runAsync('DELETE FROM daily_stats');
+    await db.runAsync('DELETE FROM app_settings');
+    await ensureDefaultSettings(db);
+    await db.runAsync(
+      `
+        INSERT INTO app_meta (key, value)
+        VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `,
+      'last_reset_at',
+      nowIso()
+    );
+    await db.execAsync('COMMIT');
+
+    return getStudySettings(db);
+  } catch (error) {
+    await db.execAsync('ROLLBACK');
+    throw error;
+  }
 }

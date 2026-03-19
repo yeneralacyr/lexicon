@@ -1,8 +1,10 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import React, { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TopBar } from '@/components/navigation/top-bar';
@@ -10,15 +12,26 @@ import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, layout, palette, spacing } from '@/constants/theme';
-import { getAppOverview, getSettings, updateSettings } from '@/modules/progress/progress.service';
+import {
+  exportProgressSnapshot,
+  getAppOverview,
+  getSettings,
+  resetUserData,
+  updateSettings,
+} from '@/modules/progress/progress.service';
+import { useSessionStore } from '@/store/sessionStore';
 import type { AppOverview, StudySettings } from '@/types/db';
+import { formatShortDate } from '@/utils/dates';
 
 const newWordOptions = [5, 10, 15];
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [settings, setSettings] = useState<StudySettings | null>(null);
   const [overview, setOverview] = useState<AppOverview | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const refresh = useCallback(async () => {
     const [nextSettings, nextOverview] = await Promise.all([getSettings(), getAppOverview()]);
@@ -37,12 +50,84 @@ export default function SettingsScreen() {
     setSettings(next);
   }
 
+  async function handleExport() {
+    if (isExporting) {
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      const payload = await exportProgressSnapshot();
+      const file = new File(
+        Paths.cache,
+        `lexicon-progress-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
+      );
+
+      if (file.exists) {
+        file.delete();
+      }
+
+      file.create({ intermediates: true, overwrite: true });
+      file.write(JSON.stringify(payload, null, 2));
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Export Lexicon progress',
+          UTI: 'public.json',
+        });
+      } else {
+        Alert.alert('Export complete', `Progress snapshot saved to:\n${file.uri}`);
+      }
+    } catch (error) {
+      Alert.alert('Export failed', error instanceof Error ? error.message : 'Unable to export progress data.');
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  function handleResetPrompt() {
+    if (isResetting) {
+      return;
+    }
+
+    Alert.alert(
+      'Reset study data?',
+      'This clears sessions, progress, daily stats, and onboarding choices. Bundled words stay on the device.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            void handleReset();
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleReset() {
+    setIsResetting(true);
+
+    try {
+      await resetUserData();
+      setActiveSessionId(null);
+      await refresh();
+      router.replace('/onboarding');
+    } catch (error) {
+      Alert.alert('Reset failed', error instanceof Error ? error.message : 'Unable to reset study data.');
+    } finally {
+      setIsResetting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <TopBar
         align="left"
         leftAction={{ icon: 'arrow-back', onPress: () => router.back() }}
-        rightAction={{ icon: 'settings' }}
       />
       <View style={styles.container}>
         <DotMatrixBackground opacity={0.03} />
@@ -129,35 +214,63 @@ export default function SettingsScreen() {
                     value={settings?.notificationsEnabled ?? false}
                   />
                 </View>
+              </View>
+
+              <View style={styles.sideCard}>
+                <View style={styles.preferenceRow}>
+                  <View>
+                    <Text style={styles.preferenceTitle}>Storage Mode</Text>
+                    <TechnicalLabel color="rgba(71,71,71,0.75)">Persistence Layer</TechnicalLabel>
+                  </View>
+                  <Text style={styles.inlineValue}>SQLite Native</Text>
+                </View>
 
                 <View style={styles.preferenceRow}>
                   <View>
-                    <Text style={styles.preferenceTitle}>Interface Theme</Text>
-                    <TechnicalLabel color="rgba(71,71,71,0.75)">Chroma Profile</TechnicalLabel>
+                    <Text style={styles.preferenceTitle}>Seeded</Text>
+                    <TechnicalLabel color="rgba(71,71,71,0.75)">Word archive import</TechnicalLabel>
                   </View>
-                  <View style={styles.themeSwitch}>
-                    <View style={styles.themeActive}>
-                      <Text style={styles.themeActiveText}>Light</Text>
-                    </View>
-                    <View style={styles.themeInactive}>
-                      <Text style={styles.themeInactiveText}>Dark</Text>
-                    </View>
+                  <Text style={styles.inlineValue}>
+                    {overview?.seededAt ? formatShortDate(overview.seededAt) : 'Not seeded'}
+                  </Text>
+                </View>
+
+                <View style={styles.preferenceRow}>
+                  <View>
+                    <Text style={styles.preferenceTitle}>Active Session</Text>
+                    <TechnicalLabel color="rgba(71,71,71,0.75)">Resume state</TechnicalLabel>
                   </View>
+                  <Text style={styles.inlineValue}>
+                    {overview?.activeSessionId ? 'Ready' : 'None'}
+                  </Text>
                 </View>
               </View>
 
               <View style={styles.actionStack}>
-                <ActionButton label="Export Progress" variant="secondary" />
-                <ActionButton label="Data Reset" variant="secondary" style={styles.dangerButton} />
+                <ActionButton
+                  disabled={isExporting || isResetting}
+                  label={isExporting ? 'Exporting...' : 'Export Progress'}
+                  onPress={() => {
+                    void handleExport();
+                  }}
+                  variant="secondary"
+                />
+                <ActionButton
+                  disabled={isResetting || isExporting}
+                  label={isResetting ? 'Resetting...' : 'Data Reset'}
+                  onPress={handleResetPrompt}
+                  variant="secondary"
+                  style={styles.dangerButton}
+                />
               </View>
             </View>
           </View>
 
           <View style={styles.footerStats}>
-            <FooterStat label="Build Version" value={`${overview?.dbVersion ?? '0'}.4-STABLE`} />
-            <FooterStat label="Storage Util" value={`${Math.max(1, Math.round((overview?.wordCount ?? 0) / 211))} MB`} />
-            <FooterStat label="Last Sync" value="LOCAL ONLY" />
-            <FooterStat label="Legal" value="PRIVACY POLICY" align="right" />
+            <FooterStat label="DB Version" value={`v${overview?.dbVersion ?? '0'}`} />
+            <FooterStat label="Seed Version" value={`v${overview?.seedVersion ?? '0'}`} />
+            <FooterStat label="Words Indexed" value={String(overview?.wordCount ?? 0)} />
+            <FooterStat label="Storage" value="SQLITE NATIVE" align="right" />
           </View>
         </ScrollView>
       </View>
@@ -322,29 +435,11 @@ const styles = StyleSheet.create({
     color: palette.primary,
     textTransform: 'uppercase',
   },
-  themeSwitch: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  themeActive: {
-    backgroundColor: palette.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  themeInactive: {
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  themeActiveText: {
+  inlineValue: {
     fontFamily: fontFamilies.bodyBold,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    color: palette.surfaceContainerLowest,
-  },
-  themeInactiveText: {
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
     color: palette.primary,
   },

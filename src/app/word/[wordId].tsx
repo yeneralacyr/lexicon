@@ -76,7 +76,7 @@ export default function WordDetailScreen() {
     <SafeAreaView style={styles.safeArea}>
       <TopBar
         align="left"
-        leftAction={{ icon: 'menu', onPress: () => router.back() }}
+        leftAction={{ icon: 'arrow-back', onPress: () => router.back() }}
         rightAction={{ icon: 'search', onPress: () => router.push('/search') }}
       />
 

@@ -136,7 +136,16 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
       SELECT COUNT(*) as count
       FROM words w
       LEFT JOIN word_progress p ON p.word_id = w.id
-      WHERE p.word_id IS NULL OR p.status = 'new'
+      WHERE p.word_id IS NULL
+         OR (p.status = 'new' AND COALESCE(p.is_suspended, 0) = 0)
+    `
+  );
+  const studiedWords = await db.getFirstAsync<{ count: number }>(
+    `
+      SELECT COUNT(*) as count
+      FROM word_progress
+      WHERE status IN ('learning', 'review', 'mastered')
+        AND is_suspended = 0
     `
   );
   const learningWords = await db.getFirstAsync<{ count: number }>(
@@ -155,11 +164,40 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
         AND is_suspended = 0
     `
   );
+  const todayStats = await db.getFirstAsync<{
+    reviewed_count: number;
+    new_count: number;
+  }>(
+    `
+      SELECT reviewed_count, new_count
+      FROM daily_stats
+      WHERE date = ?
+    `,
+    todayIso()
+  );
+  const activeSession = await db.getFirstAsync<{
+    id: string;
+    completed_items: number;
+    total_items: number;
+  }>(
+    `
+      SELECT id, completed_items, total_items
+      FROM sessions
+      WHERE status = 'active'
+        AND completed_items < total_items
+      ORDER BY started_at DESC
+      LIMIT 1
+    `
+  );
   const totalWordCount = totalWords?.count ?? 0;
   const dueCount = dueToday?.count ?? 0;
   const newWordCount = newWords?.count ?? 0;
   const streakDays = await getStreakDays(db);
-  const recommendedCount = dueCount + settings.dailyNewLimit;
+  const recommendedCount = activeSession
+    ? activeSession.total_items
+    : dueCount + Math.min(settings.dailyNewLimit, newWordCount);
+  const todayReviewedCount = todayStats?.reviewed_count ?? 0;
+  const todayNewCount = todayStats?.new_count ?? 0;
 
   return {
     totalWords: totalWordCount,
@@ -167,10 +205,16 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
     newWords: newWordCount,
     learningWords: learningWords?.count ?? 0,
     masteredWords: masteredWords?.count ?? 0,
-    studiedWords: totalWordCount - newWordCount,
+    studiedWords: studiedWords?.count ?? 0,
     recommendedCount,
     estimatedMinutes: Math.max(1, Math.ceil(recommendedCount / 4)),
     streakDays,
+    todayReviewedCount,
+    todayNewCount,
+    completedToday: todayReviewedCount + todayNewCount,
+    activeSessionId: activeSession?.id ?? null,
+    activeSessionCompletedItems: activeSession?.completed_items ?? 0,
+    activeSessionTotalItems: activeSession?.total_items ?? 0,
   };
 }
 
@@ -183,11 +227,28 @@ export async function getAppOverviewQuery(db: SQLiteDatabase): Promise<AppOvervi
     'SELECT value FROM app_meta WHERE key = ?',
     'seed_version'
   );
+  const seededAt = await db.getFirstAsync<{ value: string }>(
+    'SELECT value FROM app_meta WHERE key = ?',
+    'seeded_at'
+  );
   const wordCount = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM words');
+  const activeSession = await db.getFirstAsync<{ id: string }>(
+    `
+      SELECT id
+      FROM sessions
+      WHERE status = 'active'
+        AND completed_items < total_items
+      ORDER BY started_at DESC
+      LIMIT 1
+    `
+  );
 
   return {
     dbVersion: dbVersion?.value ?? '0',
     seedVersion: seedVersion?.value ?? '0',
     wordCount: wordCount?.count ?? 0,
+    storageMode: 'sqlite-native',
+    seededAt: seededAt?.value ?? null,
+    activeSessionId: activeSession?.id ?? null,
   };
 }

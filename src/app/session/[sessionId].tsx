@@ -24,6 +24,7 @@ export default function SessionScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [itemStartedAt, setItemStartedAt] = useState(() => Date.now());
 
   useEffect(() => {
     let active = true;
@@ -73,6 +74,12 @@ export default function SessionScreen() {
     return session.items[currentIndex] ?? null;
   }, [currentIndex, session]);
 
+  useEffect(() => {
+    if (activeItem?.id) {
+      setItemStartedAt(Date.now());
+    }
+  }, [activeItem?.id]);
+
   async function handleClose() {
     setActiveSessionId(null);
     router.replace('/today');
@@ -104,6 +111,7 @@ export default function SessionScreen() {
         wordId: activeItem.wordId,
         rating,
         completedItems: nextCompletedItems,
+        durationMs: Math.max(0, Date.now() - itemStartedAt),
       });
 
       const nextItems = session.items.map((item) =>
@@ -230,13 +238,6 @@ export default function SessionScreen() {
               <View>
                 <TechnicalLabel color="rgba(119,119,119,0.95)">Precision Learning</TechnicalLabel>
                 <TechnicalLabel color={palette.primary}>Lexicon v.01</TechnicalLabel>
-              </View>
-            </View>
-
-            <View style={styles.rightAnchor}>
-              <TechnicalLabel color="rgba(119,119,119,0.6)">Press space to reveal</TechnicalLabel>
-              <View style={styles.keyHint}>
-                <Text style={styles.keyHintText}>SPC</Text>
               </View>
             </View>
           </>
@@ -429,28 +430,6 @@ const styles = StyleSheet.create({
     width: 2,
     height: 34,
     backgroundColor: palette.primary,
-  },
-  rightAnchor: {
-    position: 'absolute',
-    right: spacing.xl,
-    bottom: spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  keyHint: {
-    width: 34,
-    height: 34,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  keyHintText: {
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: palette.primary,
   },
   pressed: {
     opacity: 0.72,

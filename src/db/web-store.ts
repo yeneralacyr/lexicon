@@ -1,131 +1,57 @@
-import wordsSeed from '@/assets/data/words.json';
 import type { StudySettings } from '@/types/db';
-import type { Rating } from '@/types/progress';
 import type { SessionDetail, SessionQueueItem, SessionSummary } from '@/types/session';
 import type { SeedWordRow } from '@/types/word';
 
-type WebState = {
-  initialized: boolean;
-  words: SeedWordRow[];
-  settings: StudySettings;
-  sessions: Map<string, SessionDetail>;
-};
-
-const defaultSettings: StudySettings = {
-  dailyNewLimit: 10,
-  dailyReviewLimit: 20,
-  sessionGoalMinutes: 5,
-  onboardingCompleted: false,
-  notificationsEnabled: false,
-};
-
-const state: WebState = {
-  initialized: false,
-  words: wordsSeed as SeedWordRow[],
-  settings: defaultSettings,
-  sessions: new Map<string, SessionDetail>(),
-};
+function unsupported(): never {
+  throw new Error('Web is not supported for Lexicon native local database builds.');
+}
 
 export function initializeWebStore() {
-  state.initialized = true;
+  return undefined;
 }
 
-export function getWebWords() {
-  return state.words;
+export function getWebWords(): SeedWordRow[] {
+  return unsupported();
 }
 
-export function getWebSettings() {
-  return state.settings;
+export function getWebSettings(): StudySettings {
+  return unsupported();
 }
 
-export function updateWebSettings(updates: Partial<StudySettings>) {
-  state.settings = {
-    ...state.settings,
-    ...updates,
-  };
-
-  return state.settings;
+export function updateWebSettings(_: Partial<StudySettings>): StudySettings {
+  return unsupported();
 }
 
-export function saveWebSession(session: SessionDetail) {
-  state.sessions.set(session.id, session);
+export function saveWebSession(_: SessionDetail) {
+  unsupported();
 }
 
-export function getWebSession(sessionId: string) {
-  return state.sessions.get(sessionId) ?? null;
+export function getWebSession(_: string): SessionDetail | null {
+  return unsupported();
 }
 
-export function getWebSessionSummary(sessionId: string): SessionSummary | null {
-  const session = state.sessions.get(sessionId);
-  if (!session) {
-    return null;
-  }
-
-  return {
-    id: session.id,
-    totalItems: session.totalItems,
-    completedItems: session.completedItems,
-    newItems: session.newItems,
-    reviewItems: session.reviewItems,
-    tomorrowCount: 0,
-  };
+export function getWebSessionSummary(_: string): SessionSummary | null {
+  return unsupported();
 }
 
-export function completeWebSession(sessionId: string) {
-  const session = state.sessions.get(sessionId);
-  if (!session) {
-    return;
-  }
-
-  state.sessions.set(sessionId, {
-    ...session,
-    status: 'completed',
-    completedItems: session.totalItems,
-  });
+export function completeWebSession(_: string) {
+  unsupported();
 }
 
 export function createWebSession(
-  sessionId: string,
-  items: SessionQueueItem[],
-  totalItems: number,
-  newItems: number,
-  reviewItems: number
-) {
-  const session: SessionDetail = {
-    id: sessionId,
-    status: 'active',
-    totalItems,
-    completedItems: 0,
-    newItems,
-    reviewItems,
-    items,
-  };
-
-  saveWebSession(session);
-
-  return session;
+  _: string,
+  __: SessionQueueItem[],
+  ___: number,
+  ____: number,
+  _____: number
+): SessionDetail {
+  return unsupported();
 }
 
-export function setWebSessionCompletedItems(sessionId: string, completedItems: number) {
-  const session = state.sessions.get(sessionId);
-  if (!session) {
-    return;
-  }
-
-  state.sessions.set(sessionId, {
-    ...session,
-    completedItems,
-  });
+export function setWebSessionCompletedItems(_: string, __: number) {
+  unsupported();
 }
 
-export function markWebSessionItemRated(sessionId: string, sessionItemId: number, rating: Rating) {
-  const session = state.sessions.get(sessionId);
-  if (!session) {
-    return;
-  }
-
-  state.sessions.set(sessionId, {
-    ...session,
-    items: session.items.map((item) => (item.id === sessionItemId ? { ...item, resultRating: rating } : item)),
-  });
+export function markWebSessionItemRated(_: string, __: number, ___: string) {
+  unsupported();
 }

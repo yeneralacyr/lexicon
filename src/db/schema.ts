@@ -1,8 +1,8 @@
 export const APP_DB_NAME = 'lexicon.db';
-export const APP_DB_VERSION = 1;
+export const APP_DB_VERSION = 2;
 export const WORDS_SEED_VERSION = 1;
 
-export const createTablesSql = `
+const schemaV1Sql = `
 CREATE TABLE IF NOT EXISTS app_meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -89,3 +89,22 @@ CREATE INDEX IF NOT EXISTS idx_progress_next_due_at ON word_progress(next_due_at
 CREATE INDEX IF NOT EXISTS idx_progress_status ON word_progress(status);
 CREATE INDEX IF NOT EXISTS idx_session_items_session_id ON session_items(session_id);
 `;
+
+const schemaV2Sql = `
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions(started_at);
+CREATE INDEX IF NOT EXISTS idx_session_items_session_order ON session_items(session_id, order_index);
+CREATE INDEX IF NOT EXISTS idx_progress_favorite ON word_progress(is_favorite);
+CREATE INDEX IF NOT EXISTS idx_progress_suspended ON word_progress(is_suspended);
+`;
+
+export const migrationDefinitions = [
+  {
+    version: 1,
+    statements: [schemaV1Sql],
+  },
+  {
+    version: 2,
+    statements: [schemaV2Sql],
+  },
+] as const;

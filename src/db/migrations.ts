@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { APP_DB_VERSION, createTablesSql } from '@/db/schema';
+import { APP_DB_VERSION, migrationDefinitions } from '@/db/schema';
 
 async function getCurrentVersion(db: SQLiteDatabase) {
   await db.execAsync('CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);');
@@ -32,6 +32,23 @@ export async function runMigrations(db: SQLiteDatabase) {
     return;
   }
 
-  await db.execAsync(createTablesSql);
-  await setCurrentVersion(db, APP_DB_VERSION);
+  const pendingMigrations = migrationDefinitions.filter(
+    (definition) => definition.version > currentVersion && definition.version <= APP_DB_VERSION
+  );
+
+  for (const migration of pendingMigrations) {
+    await db.execAsync('BEGIN');
+
+    try {
+      for (const statement of migration.statements) {
+        await db.execAsync(statement);
+      }
+
+      await setCurrentVersion(db, migration.version);
+      await db.execAsync('COMMIT');
+    } catch (error) {
+      await db.execAsync('ROLLBACK');
+      throw error;
+    }
+  }
 }

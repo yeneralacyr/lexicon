@@ -38,7 +38,7 @@ export default function Index() {
         <DotMatrixBackground opacity={0.1} />
 
         <View style={styles.centerBlock}>
-          <TechnicalLabel style={styles.serial}>System.v1.0.4 • Minimal.Kernel</TechnicalLabel>
+          <TechnicalLabel style={styles.serial}>SQLite bootstrap • Local-first kernel</TechnicalLabel>
           <View style={styles.logoBlock}>
             <Text style={styles.logo}>LEXICON</Text>
             <View style={styles.underline} />
@@ -52,14 +52,14 @@ export default function Index() {
           </View>
           <View style={styles.progressMeta}>
             <TechnicalLabel color="rgba(71,71,71,0.6)" style={styles.progressText}>
-              Loading modules
+              Local storage ready
             </TechnicalLabel>
             <TechnicalLabel color="rgba(71,71,71,0.6)" style={styles.progressText}>
-              34%
+              Routing next
             </TechnicalLabel>
           </View>
           <TechnicalLabel color="rgba(71,71,71,0.35)" style={styles.footnote}>
-            © 2024 Industrial Monolith Design
+            Native-only persistent storage
           </TechnicalLabel>
         </View>
       </View>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(198,198,198,0.55)',
   },
   progressFill: {
-    width: '34%',
+    width: '100%',
     height: '100%',
     backgroundColor: palette.primary,
   },

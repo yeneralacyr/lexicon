@@ -8,9 +8,11 @@ type ActionButtonProps = {
   onPress?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
   style?: ViewStyle;
+  disabled?: boolean;
 };
 
 export function ActionButton({
+  disabled = false,
   label,
   onPress,
   style,
@@ -18,12 +20,14 @@ export function ActionButton({
 }: ActionButtonProps) {
   return (
     <Pressable
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
         variant === 'primary' && styles.primary,
         variant === 'secondary' && styles.secondary,
         variant === 'ghost' && styles.ghost,
+        disabled && styles.disabled,
         pressed && styles.pressed,
         style,
       ]}>
@@ -57,6 +61,9 @@ const styles = StyleSheet.create({
   },
   ghost: {
     backgroundColor: 'transparent',
+  },
+  disabled: {
+    opacity: 0.45,
   },
   pressed: {
     opacity: 0.9,

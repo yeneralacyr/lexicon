@@ -75,7 +75,7 @@ export default function SessionCompleteScreen() {
     <SafeAreaView style={styles.safeArea}>
       <TopBar
         align="left"
-        leftAction={{ icon: 'menu', onPress: () => router.replace('/today') }}
+        leftAction={{ icon: 'arrow-back', onPress: () => router.replace('/today') }}
         rightAction={{ icon: 'settings', onPress: () => router.push('/settings') }}
       />
 
@@ -134,7 +134,7 @@ export default function SessionCompleteScreen() {
               style={styles.primaryAction}
             />
             <ActionButton
-              label={isStartingReview ? 'Preparing review...' : 'Re-review Difficult Words'}
+              label={isStartingReview ? 'Preparing review...' : 'Start Review Session'}
               onPress={() => {
                 void handleRereview();
               }}

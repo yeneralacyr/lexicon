@@ -11,7 +11,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { appTheme, palette, spacing } from '@/constants/theme';
 import { initializeDatabase } from '@/db';
@@ -19,6 +19,7 @@ import { initializeDatabase } from '@/db';
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
+  const isWeb = Platform.OS === 'web';
   const [fontsLoaded, fontsError] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
@@ -37,7 +38,10 @@ export default function RootLayout() {
     async function bootstrap() {
       try {
         await SystemUI.setBackgroundColorAsync(palette.background);
-        await initializeDatabase();
+
+        if (!isWeb) {
+          await initializeDatabase();
+        }
 
         if (active) {
           setDbReady(true);
@@ -54,7 +58,7 @@ export default function RootLayout() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [isWeb]);
 
   useEffect(() => {
     if (!fontsLoaded || !dbReady || error) {
@@ -77,6 +81,20 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !dbReady) {
     return null;
+  }
+
+  if (isWeb) {
+    return (
+      <View style={styles.errorScreen}>
+        <StatusBar style="dark" />
+        <Text style={styles.errorEyebrow}>NATIVE ONLY BUILD</Text>
+        <Text style={styles.errorTitle}>Persistent storage requires iOS or Android.</Text>
+        <Text style={styles.errorText}>
+          Lexicon uses native SQLite, local exports, and share flows. Web preview is intentionally disabled
+          for production parity.
+        </Text>
+      </View>
+    );
   }
 
   return (

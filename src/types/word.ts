@@ -16,14 +16,30 @@ export type WordListItem = {
   english: string;
   turkish: string;
   status: WordStatus | null;
-  isFavorite?: boolean;
+  isFavorite: boolean;
 };
 
 export type WordCandidate = {
   id: number;
   english: string;
   turkish: string;
-  sentence: string | null;
+  sentences: string[];
+};
+
+export type LibraryFilter = 'all' | 'new' | 'learning' | 'review' | 'mastered' | 'favorites';
+
+export type LibraryQuery = {
+  filter: LibraryFilter;
+  offset: number;
+  limit: number;
+};
+
+export type LibraryPage = {
+  items: WordListItem[];
+  totalCount: number;
+  totalWords: number;
+  learnedCount: number;
+  nextOffset: number | null;
 };
 
 export type WordDetail = WordListItem & {

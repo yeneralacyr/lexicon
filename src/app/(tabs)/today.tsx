@@ -58,12 +58,38 @@ export default function TodayScreen() {
 
   const recommendedCount = snapshot?.recommendedCount ?? 0;
   const plannedNewCount = Math.max(0, recommendedCount - (snapshot?.dueToday ?? 0));
+  const hasActiveSession = Boolean(snapshot?.activeSessionId);
+  const completedToday = snapshot?.completedToday ?? 0;
+  const activeSessionCompletedItems = snapshot?.activeSessionCompletedItems ?? 0;
+  const activeSessionTotalItems = snapshot?.activeSessionTotalItems ?? 0;
+  const activeSessionRemaining = Math.max(0, activeSessionTotalItems - activeSessionCompletedItems);
+  const queueEmpty = !hasActiveSession && recommendedCount === 0;
+  const progressPercent = hasActiveSession
+    ? activeSessionTotalItems > 0
+      ? (activeSessionCompletedItems / activeSessionTotalItems) * 100
+      : 0
+    : recommendedCount > 0
+      ? (completedToday / recommendedCount) * 100
+      : 0;
+  const greeting = hasActiveSession
+    ? `Resume your in-progress session. ${activeSessionRemaining} cards remaining.`
+    : recommendedCount > 0
+      ? `Good morning. ${recommendedCount} words waiting for you today.`
+      : 'Good morning. No words are scheduled right now.';
+  const primaryLabel = hasActiveSession
+    ? startingMode
+      ? 'Opening session...'
+      : 'Resume Session →'
+    : queueEmpty
+      ? 'Nothing Scheduled'
+      : startingMode === 'daily'
+        ? 'Starting session...'
+        : 'Start Session →';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       <TopBar
         align="center"
-        leftAction={{ icon: 'grid-view' }}
         rightAction={{ icon: 'settings', onPress: () => router.push('/settings') }}
       />
       <View style={styles.container}>
@@ -75,37 +101,41 @@ export default function TodayScreen() {
           bounces={false}>
           <View style={styles.headerBlock}>
             <TechnicalLabel style={styles.centeredLabel}>Status report</TechnicalLabel>
-            <Text style={styles.greeting}>
-              Good morning. {recommendedCount} words waiting for you today.
-            </Text>
+            <Text style={styles.greeting}>{greeting}</Text>
           </View>
 
           <View style={styles.heroCard}>
             <TechnicalLabel color="rgba(119,119,119,0.75)" style={styles.heroTag}>
               Module 04-A
             </TechnicalLabel>
-            <Text style={styles.heroNumber}>{recommendedCount}</Text>
-            <TechnicalLabel style={styles.heroCaption}>Today&apos;s review</TechnicalLabel>
+            <Text style={styles.heroNumber}>{hasActiveSession ? activeSessionRemaining : recommendedCount}</Text>
+            <TechnicalLabel style={styles.heroCaption}>
+              {hasActiveSession ? 'Items remaining' : "Today&apos;s review"}
+            </TechnicalLabel>
 
             <View style={styles.heroMeta}>
               <View style={styles.heroMetaRow}>
-                <Text style={styles.heroMetaText}>{plannedNewCount} new words</Text>
-                <Text style={styles.heroMetaText}>~{snapshot?.estimatedMinutes ?? 0} min</Text>
+                <Text style={styles.heroMetaText}>
+                  {hasActiveSession
+                    ? `${activeSessionCompletedItems} completed`
+                    : `${plannedNewCount} new words`}
+                </Text>
+                <Text style={styles.heroMetaText}>
+                  {hasActiveSession
+                    ? `~${Math.max(1, snapshot?.estimatedMinutes ?? 0)} min left`
+                    : `~${snapshot?.estimatedMinutes ?? 0} min`}
+                </Text>
               </View>
               <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min(100, Math.max(18, (snapshot?.dueToday ?? 0) * 6))}%` },
-                  ]}
-                />
+                <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, progressPercent))}%` }]} />
               </View>
             </View>
           </View>
 
           <View style={styles.ctaBlock}>
             <ActionButton
-              label={startingMode === 'daily' ? 'Starting session...' : 'Start Session →'}
+              disabled={queueEmpty}
+              label={primaryLabel}
               onPress={() => {
                 void handleStartSession('daily');
               }}
@@ -113,18 +143,25 @@ export default function TodayScreen() {
 
             <View style={styles.modeRow}>
               <ModeLink
+                disabled={!hasActiveSession && (snapshot?.dueToday ?? 0) === 0}
                 label="Review only"
                 onPress={() => {
                   void handleStartSession('review_only');
                 }}
               />
               <ModeLink
+                disabled={!hasActiveSession && (snapshot?.newWords ?? 0) === 0}
                 label="New words only"
                 onPress={() => {
                   void handleStartSession('new_only');
                 }}
               />
             </View>
+            {queueEmpty ? (
+              <TechnicalLabel color="rgba(119,119,119,0.62)" style={styles.queueNote}>
+                No due or new cards are waiting. Come back after your next review window opens.
+              </TechnicalLabel>
+            ) : null}
           </View>
 
           <View style={styles.metricsGrid}>
@@ -145,7 +182,7 @@ export default function TodayScreen() {
           </View>
 
           <TechnicalLabel color="rgba(119,119,119,0.45)" style={styles.footerNote}>
-            Lexicon Machine-Age Interface v2.0.4
+            Completed today: {completedToday}
           </TechnicalLabel>
         </ScrollView>
       </View>
@@ -153,10 +190,21 @@ export default function TodayScreen() {
   );
 }
 
-function ModeLink({ label, onPress }: { label: string; onPress: () => void }) {
+function ModeLink({
+  disabled = false,
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.modePressed]}>
-      <Text style={styles.modeLink}>{label}</Text>
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [pressed && styles.modePressed, disabled && styles.modeDisabled]}>
+      <Text style={[styles.modeLink, disabled && styles.modeLinkDisabled]}>{label}</Text>
     </Pressable>
   );
 }
@@ -251,6 +299,11 @@ const styles = StyleSheet.create({
     maxWidth: layout.narrowWidth,
     gap: spacing.lg,
   },
+  queueNote: {
+    textAlign: 'center',
+    maxWidth: 280,
+    alignSelf: 'center',
+  },
   modeRow: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -266,6 +319,12 @@ const styles = StyleSheet.create({
   },
   modePressed: {
     opacity: 0.6,
+  },
+  modeDisabled: {
+    opacity: 0.45,
+  },
+  modeLinkDisabled: {
+    color: 'rgba(119,119,119,0.6)',
   },
   metricsGrid: {
     width: '100%',

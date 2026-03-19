@@ -40,7 +40,7 @@ export default function SearchScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
-      <TopBar align="left" leftAction={{ icon: 'menu' }} rightAction={{ icon: 'search' }} />
+      <TopBar align="left" />
       <View style={styles.container}>
         <DotMatrixBackground opacity={0.1} />
         <ScrollView
@@ -84,7 +84,10 @@ export default function SearchScreen() {
 
             {results.map((word, index) => (
               <Link key={word.id} href={`/word/${word.id}`} asChild>
-                <Pressable style={({ pressed }) => [styles.resultCard, pressed && styles.resultPressed]}>
+                <Pressable
+                  style={({ pressed }) =>
+                    StyleSheet.flatten([styles.resultCard, pressed && styles.resultPressed])
+                  }>
                   <View>
                     <TechnicalLabel color="rgba(119,119,119,0.8)" style={styles.resultIndex}>
                       {String(index + 1).padStart(3, '0')}
@@ -109,11 +112,11 @@ export default function SearchScreen() {
             <View style={styles.metaItem}>
               <View style={styles.metaDot} />
               <TechnicalLabel color="rgba(71,71,71,0.5)" style={styles.metaLabel}>
-                Engine Status: Ready
+                Results: {results.length}
               </TechnicalLabel>
             </View>
             <TechnicalLabel color="rgba(71,71,71,0.5)" style={styles.metaLabel}>
-              v1.0.4-search
+              Query: {query.trim().length} chars
             </TechnicalLabel>
           </View>
         </ScrollView>

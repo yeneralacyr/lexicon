@@ -37,8 +37,6 @@ export async function ensureSeedData(db: SQLiteDatabase) {
   await db.execAsync('BEGIN');
 
   try {
-    await db.runAsync('DELETE FROM words');
-
     for (const word of seedWords) {
       await db.runAsync(
         `
@@ -55,6 +53,16 @@ export async function ensureSeedData(db: SQLiteDatabase) {
             normalized_turkish
           )
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            english = excluded.english,
+            turkish = excluded.turkish,
+            sentence1 = excluded.sentence1,
+            sentence2 = excluded.sentence2,
+            sentence3 = excluded.sentence3,
+            sentence4 = excluded.sentence4,
+            sentence5 = excluded.sentence5,
+            normalized_english = excluded.normalized_english,
+            normalized_turkish = excluded.normalized_turkish
         `,
         word.id,
         word.english,

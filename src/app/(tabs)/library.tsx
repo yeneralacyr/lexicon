@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,32 +10,35 @@ import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, layout, palette, radii, spacing } from '@/constants/theme';
 import { getLibraryWords } from '@/modules/words/words.service';
-import type { WordListItem } from '@/types/word';
+import type { LibraryPage, WordListItem } from '@/types/word';
 
-type LibraryFilter = 'all' | 'new' | 'learning' | 'review' | 'strong' | 'favorites';
+type LibraryFilter = 'all' | 'new' | 'learning' | 'review' | 'mastered' | 'favorites';
 
 const filterLabels: Record<LibraryFilter, string> = {
   all: 'All',
   new: 'New',
   learning: 'Learning',
   review: 'Review',
-  strong: 'Strong',
+  mastered: 'Strong',
   favorites: 'Favorites',
 };
 
 export default function LibraryScreen() {
   const isFocused = useIsFocused();
   const [filter, setFilter] = useState<LibraryFilter>('all');
-  const [visibleCount, setVisibleCount] = useState(20);
-  const [words, setWords] = useState<WordListItem[]>([]);
+  const [page, setPage] = useState<LibraryPage | null>(null);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const nextWords = await getLibraryWords(240);
+      const nextWords = await getLibraryWords({
+        filter,
+        offset: 0,
+        limit: 40,
+      });
       if (active) {
-        setWords(nextWords);
+        setPage(nextWords);
       }
     }
 
@@ -46,32 +49,36 @@ export default function LibraryScreen() {
     return () => {
       active = false;
     };
-  }, [isFocused]);
+  }, [filter, isFocused]);
 
-  const filteredWords = useMemo(() => {
-    return words.filter((word) => {
-      if (filter === 'all') {
-        return true;
-      }
-      if (filter === 'favorites') {
-        return Boolean(word.isFavorite);
-      }
-      if (filter === 'strong') {
-        return word.status === 'mastered';
-      }
-      return (word.status ?? 'new') === filter;
+  async function handleLoadMore() {
+    if (!page?.nextOffset) {
+      return;
+    }
+
+    const nextPage = await getLibraryWords({
+      filter,
+      offset: page.nextOffset,
+      limit: 40,
     });
-  }, [filter, words]);
 
-  const visibleWords = filteredWords.slice(0, visibleCount);
-  const learnedCount = words.filter((word) => word.status && word.status !== 'new').length;
+    setPage((current) => {
+      if (!current) {
+        return nextPage;
+      }
+
+      return {
+        ...nextPage,
+        items: [...current.items, ...nextPage.items],
+      };
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
       <TopBar
         align="left"
         bordered
-        leftAction={{ icon: 'menu' }}
         rightAction={{ icon: 'search', onPress: () => router.push('/search') }}
       />
       <View style={styles.container}>
@@ -83,7 +90,7 @@ export default function LibraryScreen() {
           <View style={styles.hero}>
             <Text style={styles.title}>LIBRARY</Text>
             <TechnicalLabel color="rgba(71,71,71,0.65)">
-              {words.length} words • {learnedCount} learned
+              {page?.totalWords ?? 0} words • {page?.learnedCount ?? 0} learned
             </TechnicalLabel>
           </View>
 
@@ -107,9 +114,19 @@ export default function LibraryScreen() {
           </ScrollView>
 
           <View style={styles.list}>
-            {visibleWords.map((word) => (
+            {page && page.items.length === 0 ? (
+              <View style={styles.emptyRow}>
+                <Text style={styles.emptyText}>
+                  No entries match this filter yet. Try another status group or keep studying to populate it.
+                </Text>
+              </View>
+            ) : null}
+            {(page?.items ?? []).map((word) => (
               <Link key={word.id} href={`/word/${word.id}`} asChild>
-                <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+                <Pressable
+                  style={({ pressed }) =>
+                    StyleSheet.flatten([styles.row, pressed && styles.rowPressed])
+                  }>
                   <View>
                     <Text style={styles.rowEnglish}>{word.english.toUpperCase()}</Text>
                     <Text style={styles.rowTurkish}>{word.turkish}</Text>
@@ -122,12 +139,14 @@ export default function LibraryScreen() {
             ))}
           </View>
 
-          {filteredWords.length > visibleCount ? (
+          {page?.nextOffset !== null && page?.nextOffset !== undefined ? (
             <View style={styles.loadMore}>
               <ActionButton
                 label="Load More Entries"
                 variant="secondary"
-                onPress={() => setVisibleCount((current) => current + 20)}
+                onPress={() => {
+                  void handleLoadMore();
+                }}
               />
             </View>
           ) : null}
@@ -211,6 +230,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: 'rgba(198,198,198,0.45)',
+  },
+  emptyRow: {
+    minHeight: 140,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+  },
+  emptyText: {
+    fontFamily: fontFamilies.bodyMedium,
+    fontSize: 16,
+    lineHeight: 24,
+    color: palette.muted,
+    maxWidth: 320,
   },
   row: {
     minHeight: 92,

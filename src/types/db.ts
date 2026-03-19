@@ -8,12 +8,21 @@ export type DashboardSnapshot = {
   recommendedCount: number;
   estimatedMinutes: number;
   streakDays: number;
+  todayReviewedCount: number;
+  todayNewCount: number;
+  completedToday: number;
+  activeSessionId: string | null;
+  activeSessionCompletedItems: number;
+  activeSessionTotalItems: number;
 };
 
 export type AppOverview = {
   dbVersion: string;
   seedVersion: string;
   wordCount: number;
+  storageMode: 'sqlite-native';
+  seededAt: string | null;
+  activeSessionId: string | null;
 };
 
 export type StudySettings = {
@@ -22,4 +31,18 @@ export type StudySettings = {
   sessionGoalMinutes: number;
   onboardingCompleted: boolean;
   notificationsEnabled: boolean;
+};
+
+export type SqliteExportValue = string | number | null;
+
+export type SqliteExportRow = Record<string, SqliteExportValue>;
+
+export type ProgressExportPayload = {
+  generatedAt: string;
+  appMeta: SqliteExportRow[];
+  appSettings: SqliteExportRow[];
+  wordProgress: SqliteExportRow[];
+  sessions: SqliteExportRow[];
+  sessionItems: SqliteExportRow[];
+  dailyStats: SqliteExportRow[];
 };

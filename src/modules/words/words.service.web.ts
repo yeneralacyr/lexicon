@@ -1,63 +1,21 @@
-import { getWebWords } from '@/db/web-store';
-import type { WordDetail, WordListItem } from '@/types/word';
-import { normalizeSearchText } from '@/utils/normalize';
+import type { LibraryPage, LibraryQuery, WordCandidate, WordDetail, WordListItem } from '@/types/word';
 
-function toWordListItem(word: (typeof getWebWords extends () => (infer T)[] ? T : never)): WordListItem {
-  return {
-    id: word.id,
-    english: word.english,
-    turkish: word.turkish,
-    status: 'new',
-  };
+function unsupported(): never {
+  throw new Error('Lexicon is supported on native builds only.');
 }
 
-export async function getLibraryWords(limit = 40): Promise<WordListItem[]> {
-  return getWebWords().slice(0, limit).map(toWordListItem);
+export async function getLibraryWords(_: LibraryQuery): Promise<LibraryPage> {
+  unsupported();
 }
 
-export async function searchWords(query: string, limit = 20): Promise<WordListItem[]> {
-  const normalized = normalizeSearchText(query);
-
-  return getWebWords()
-    .filter((word) => {
-      const english = normalizeSearchText(word.english);
-      const turkish = normalizeSearchText(word.turkish);
-
-      return english.includes(normalized) || turkish.includes(normalized);
-    })
-    .slice(0, limit)
-    .map(toWordListItem);
+export async function searchWords(_: string, __ = 20): Promise<WordListItem[]> {
+  unsupported();
 }
 
-export async function getWordDetail(wordId: number): Promise<WordDetail | null> {
-  const word = getWebWords().find((item) => item.id === wordId);
-
-  if (!word) {
-    return null;
-  }
-
-  return {
-    ...toWordListItem(word),
-    sentences: [word.sentence1, word.sentence2, word.sentence3, word.sentence4, word.sentence5].filter(
-      (sentence): sentence is string => Boolean(sentence)
-    ),
-    seenCount: 0,
-    correctCount: 0,
-    wrongCount: 0,
-    lastSeenAt: null,
-    nextDueAt: null,
-    isFavorite: false,
-    isSuspended: false,
-  };
+export async function getWordDetail(_: number): Promise<WordDetail | null> {
+  unsupported();
 }
 
-export async function getNewWordCandidates(limit: number) {
-  return getWebWords()
-    .slice(0, limit)
-    .map((word) => ({
-      id: word.id,
-      english: word.english,
-      turkish: word.turkish,
-      sentence: word.sentence1 ?? null,
-    }));
+export async function getNewWordCandidates(_: number): Promise<WordCandidate[]> {
+  unsupported();
 }

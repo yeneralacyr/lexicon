@@ -97,7 +97,7 @@ export default function OnboardingScreen() {
             }}
           />
           <TechnicalLabel color="rgba(119,119,119,0.45)" style={styles.footerText}>
-            Lexicon © 2024 Machine-Age
+            Local-first study setup
           </TechnicalLabel>
         </View>
       </View>

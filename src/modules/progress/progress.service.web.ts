@@ -1,34 +1,51 @@
-import { getWebSettings, getWebWords, updateWebSettings } from '@/db/web-store';
-import type { AppOverview } from '@/types/db';
+import type { AppOverview, ProgressExportPayload, StudySettings } from '@/types/db';
+import type { Rating, WordProgressRecord } from '@/types/progress';
+import type { WordCandidate } from '@/types/word';
+
+function unsupported(): never {
+  throw new Error('Lexicon is supported on native builds only.');
+}
 
 export async function getAppOverview(): Promise<AppOverview> {
-  return {
-    dbVersion: 'web',
-    seedVersion: '1',
-    wordCount: getWebWords().length,
-  };
+  unsupported();
 }
 
-export async function getSettings() {
-  return getWebSettings();
+export async function getSettings(): Promise<StudySettings> {
+  unsupported();
 }
 
-export async function updateSettings(updates: Parameters<typeof updateWebSettings>[0]) {
-  return updateWebSettings(updates);
+export async function updateSettings(_: Partial<StudySettings>): Promise<StudySettings> {
+  unsupported();
 }
 
-export async function applyWordRating() {
-  return null;
+export async function getDueWordCandidates(_: number): Promise<WordCandidate[]> {
+  unsupported();
 }
 
-export async function toggleFavorite() {
-  return false;
+export async function applyWordRating(_: number, __: Rating): Promise<WordProgressRecord> {
+  unsupported();
 }
 
-export async function toggleSuspended() {
-  return false;
+export async function recordDailyStats() {
+  unsupported();
 }
 
-export async function pushWordToReview() {
-  return null;
+export async function toggleFavorite(_: number): Promise<boolean> {
+  unsupported();
+}
+
+export async function toggleSuspended(_: number): Promise<boolean> {
+  unsupported();
+}
+
+export async function pushWordToReview(_: number) {
+  unsupported();
+}
+
+export async function exportProgressSnapshot(): Promise<ProgressExportPayload> {
+  unsupported();
+}
+
+export async function resetUserData(): Promise<StudySettings> {
+  unsupported();
 }

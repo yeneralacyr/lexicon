@@ -1,27 +1,41 @@
-import {
-  completeWebSession,
-  getWebSession,
-  getWebSessionSummary,
-  markWebSessionItemRated,
-  setWebSessionCompletedItems,
-} from '@/db/web-store';
+import type { ActiveSession, SessionDetail, SessionSummary } from '@/types/session';
 
-export async function getSessionDetail(sessionId: string) {
-  return getWebSession(sessionId);
+function unsupported(): never {
+  throw new Error('Lexicon is supported on native builds only.');
 }
 
-export async function completeSession(sessionId: string) {
-  completeWebSession(sessionId);
+export async function createSession() {
+  unsupported();
 }
 
-export async function markSessionItemRated(sessionItemId: number, rating: Parameters<typeof markWebSessionItemRated>[2]) {
-  return { sessionItemId, rating };
+export async function createSessionItems() {
+  unsupported();
 }
 
-export async function setSessionCompletedItems(sessionId: string, completedItems: number) {
-  setWebSessionCompletedItems(sessionId, completedItems);
+export async function getActiveSession(): Promise<ActiveSession | null> {
+  unsupported();
 }
 
-export async function getSessionSummary(sessionId: string) {
-  return getWebSessionSummary(sessionId);
+export async function resumeActiveSession(): Promise<SessionDetail | null> {
+  unsupported();
+}
+
+export async function getSessionDetail(_: string): Promise<SessionDetail | null> {
+  unsupported();
+}
+
+export async function completeSession(_: string) {
+  unsupported();
+}
+
+export async function markSessionItemRated() {
+  unsupported();
+}
+
+export async function setSessionCompletedItems() {
+  unsupported();
+}
+
+export async function getSessionSummary(_: string): Promise<SessionSummary | null> {
+  unsupported();
 }

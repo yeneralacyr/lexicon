@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   label: {
-    color: palette.card,
+    color: palette.surfaceContainerLowest,
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 0.4,

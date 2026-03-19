@@ -44,6 +44,10 @@ export async function getWordDetail(wordId: number): Promise<WordDetail | null> 
     seenCount: 0,
     correctCount: 0,
     wrongCount: 0,
+    lastSeenAt: null,
+    nextDueAt: null,
+    isFavorite: false,
+    isSuspended: false,
   };
 }
 
@@ -54,5 +58,6 @@ export async function getNewWordCandidates(limit: number) {
       id: word.id,
       english: word.english,
       turkish: word.turkish,
+      sentence: word.sentence1 ?? null,
     }));
 }

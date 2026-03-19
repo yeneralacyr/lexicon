@@ -13,7 +13,7 @@ export function Card({ children, style }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: palette.card,
+    backgroundColor: palette.surfaceContainerLowest,
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: palette.border,

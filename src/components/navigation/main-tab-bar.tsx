@@ -1,13 +1,14 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
+import type { Href } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { fontFamilies, layout, palette, radii, spacing } from '@/constants/theme';
 
-const tabMeta: Record<string, { icon: keyof typeof MaterialIcons.glyphMap; label: string; href: string }> = {
+const tabMeta: Record<string, { icon: keyof typeof MaterialIcons.glyphMap; label: string; href: Href }> = {
   today: { icon: 'calendar-today', label: 'Today', href: '/today' },
   library: { icon: 'menu-book', label: 'Library', href: '/library' },
   search: { icon: 'search', label: 'Search', href: '/search' },
@@ -20,6 +21,7 @@ export function MainTabBar({ state }: BottomTabBarProps) {
         {state.routes.map((route, index) => {
           const isFocused = state.index === index;
           const meta = tabMeta[route.name];
+          const itemStyle = StyleSheet.flatten([styles.item, isFocused && styles.activeItem]);
 
           if (!meta) {
             return null;
@@ -27,7 +29,7 @@ export function MainTabBar({ state }: BottomTabBarProps) {
 
           return (
             <Link key={route.key} href={meta.href} asChild>
-              <Pressable style={[styles.item, isFocused && styles.activeItem]}>
+              <Pressable style={itemStyle}>
                 <MaterialIcons
                   color={isFocused ? palette.surfaceContainerLowest : palette.outline}
                   name={meta.icon}

@@ -1,6 +1,6 @@
 import { getDatabase } from '@/db';
 import { getDashboardSnapshotQuery } from '@/db/queries';
-import { applyWordRating, getDueWordCandidatesRepository, getSettings } from '@/modules/progress/progress.service';
+import { applyWordRating, getDueWordCandidates, getSettings } from '@/modules/progress/progress.service';
 import {
   completeSession,
   createSession,
@@ -25,7 +25,7 @@ export async function getDashboardSnapshot(): Promise<ReviewDashboardSnapshot> {
 export async function buildDailySession(mode: SessionMode = 'daily'): Promise<BuildDailySessionResult | null> {
   const settings = await getSettings();
   const dueWords =
-    mode === 'new_only' ? [] : await getDueWordCandidatesRepository(settings.dailyReviewLimit);
+    mode === 'new_only' ? [] : await getDueWordCandidates(settings.dailyReviewLimit);
   const newWords =
     mode === 'review_only' ? [] : await getNewWordCandidates(settings.dailyNewLimit);
   const selectedWords = [...dueWords, ...newWords];

@@ -11,5 +11,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   dailyReviewLimit: 20,
   sessionGoalMinutes: 5,
   onboardingCompleted: false,
+  notificationsEnabled: false,
   hydrate: (settings) => set(settings),
 }));

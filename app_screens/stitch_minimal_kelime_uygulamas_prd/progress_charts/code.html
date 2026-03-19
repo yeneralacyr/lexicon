@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed": "#5e5e5e",
+              "inverse-primary": "#c6c6c6",
+              "tertiary-fixed": "#5d5f5f",
+              "surface-container-low": "#f3f3f3",
+              "on-primary-fixed-variant": "#e2e2e2",
+              "inverse-on-surface": "#f1f1f1",
+              "surface-container": "#eeeeee",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#c7c6c6",
+              "outline": "#777777",
+              "surface-variant": "#e2e2e2",
+              "on-primary-container": "#ffffff",
+              "on-surface": "#1a1c1c",
+              "on-secondary-container": "#1b1c1c",
+              "surface-dim": "#dadada",
+              "primary-container": "#3b3b3b",
+              "on-background": "#1a1c1c",
+              "secondary": "#5e5e5e",
+              "secondary-fixed-dim": "#acabab",
+              "on-tertiary-fixed-variant": "#e2e2e2",
+              "on-tertiary": "#e2e2e2",
+              "surface-tint": "#5e5e5e",
+              "on-secondary-fixed-variant": "#3b3b3c",
+              "on-tertiary-fixed": "#ffffff",
+              "on-error-container": "#410002",
+              "surface-container-highest": "#e2e2e2",
+              "primary": "#000000",
+              "on-error": "#ffffff",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-container": "#d5d4d4",
+              "on-primary": "#e2e2e2",
+              "primary-fixed-dim": "#474747",
+              "tertiary": "#3a3c3c",
+              "surface-container-high": "#e8e8e8",
+              "outline-variant": "#c6c6c6",
+              "inverse-surface": "#2f3131",
+              "surface": "#f9f9f9",
+              "on-tertiary-container": "#ffffff",
+              "on-primary-fixed": "#ffffff",
+              "error": "#ba1a1a",
+              "on-surface-variant": "#474747",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f9f9f9",
+              "tertiary-fixed-dim": "#454747",
+              "tertiary-container": "#737575",
+              "surface-container-lowest": "#ffffff",
+              "background": "#f9f9f9"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .dot-matrix {
+            background-image: radial-gradient(circle, #c6c6c6 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+        .technical-line {
+            stroke-dasharray: 2 2;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary selection:text-white">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 w-full max-w-none bg-neutral-100 dark:bg-neutral-900 shadow-none">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-black dark:text-white">menu_open</span>
+<h1 class="text-2xl font-black tracking-tighter text-black dark:text-white uppercase font-['Space_Grotesk']">LEXICON</h1>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-neutral-500 dark:text-neutral-400 font-label text-sm uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors px-3 py-1" href="#">Today</a>
+<a class="text-black dark:text-white font-bold font-label text-sm uppercase tracking-widest px-3 py-1" href="#">Library</a>
+<a class="text-neutral-500 dark:text-neutral-400 font-label text-sm uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors px-3 py-1" href="#">Search</a>
+<a class="text-neutral-500 dark:text-neutral-400 font-label text-sm uppercase tracking-widest hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors px-3 py-1" href="#">Profile</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-black dark:text-white">settings</span>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 md:px-12 max-w-7xl mx-auto min-h-screen">
+<!-- Dashboard Header -->
+<section class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<span class="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant font-label">System Performance</span>
+<h2 class="text-5xl font-headline font-bold tracking-tighter mt-2">ANALYTICS.LOG</h2>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-primary text-white text-xs font-bold uppercase tracking-widest rounded-sm active:scale-95 transition-transform">Export CSV</button>
+<button class="px-4 py-2 bg-surface-container text-on-surface text-xs font-bold uppercase tracking-widest rounded-sm border border-outline-variant/30 active:scale-95 transition-transform">Report Error</button>
+</div>
+</div>
+</section>
+<!-- Main Bento Grid -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Growth Over Time: Large Chart -->
+<div class="md:col-span-8 bg-surface-container-lowest p-8 rounded-lg relative overflow-hidden group">
+<div class="absolute inset-0 dot-matrix opacity-[0.15] pointer-events-none"></div>
+<div class="relative z-10">
+<div class="flex justify-between items-start mb-10">
+<div>
+<h3 class="font-headline font-bold text-xl tracking-tight uppercase">Word Acquisition</h3>
+<p class="text-xs text-on-surface-variant font-mono mt-1 tracking-wider">REF_ID: GROW_0923</p>
+</div>
+<div class="text-right">
+<span class="text-4xl font-headline font-black">+42.8%</span>
+<p class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Quarterly Delta</p>
+</div>
+</div>
+<!-- Line Chart Visual Representation -->
+<div class="h-64 w-full flex items-end gap-1 relative border-l border-b border-outline-variant/50">
+<svg class="w-full h-full" viewbox="0 0 800 200">
+<path class="technical-line" d="M0,180 L100,160 L200,170 L300,120 L400,110 L500,60 L600,80 L700,30 L800,10" fill="none" stroke="black" stroke-width="2"></path>
+<path d="M0,180 L100,160 L200,170 L300,120 L400,110 L500,60 L600,80 L700,30 L800,10 V200 H0 Z" fill="black" fill-opacity="0.03"></path>
+<!-- Data Nodes -->
+<circle cx="100" cy="160" fill="black" r="3"></circle>
+<circle cx="300" cy="120" fill="black" r="3"></circle>
+<circle cx="500" cy="60" fill="black" r="3"></circle>
+<circle cx="700" cy="30" fill="black" r="3"></circle>
+</svg>
+<!-- Axis Labels -->
+<div class="absolute bottom-[-24px] left-0 right-0 flex justify-between text-[10px] font-mono text-outline uppercase">
+<span>Jan_01</span>
+<span>Feb_01</span>
+<span>Mar_01</span>
+<span>Apr_01</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Proficiency Levels: Sidebar Stats -->
+<div class="md:col-span-4 space-y-6">
+<div class="bg-primary p-6 rounded-lg text-white relative">
+<span class="text-[10px] font-bold uppercase tracking-widest opacity-70">Mastery Level</span>
+<h4 class="text-3xl font-headline font-bold mt-1">C2 ADVANCED</h4>
+<div class="mt-6 h-1 w-full bg-white/20 overflow-hidden">
+<div class="h-full bg-white w-4/5"></div>
+</div>
+<p class="text-[10px] font-mono mt-2 opacity-70 text-right">88% TO NATIVE FLUENCY</p>
+</div>
+<div class="bg-surface-container p-6 rounded-lg border border-outline-variant/20">
+<h4 class="text-xs font-bold uppercase tracking-widest mb-4">Focus Areas</h4>
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium">Technical</span>
+<span class="text-sm font-mono font-bold">1,240</span>
+</div>
+<div class="h-[2px] w-full bg-outline-variant/30">
+<div class="h-full bg-primary w-[75%]"></div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium">Literary</span>
+<span class="text-sm font-mono font-bold">842</span>
+</div>
+<div class="h-[2px] w-full bg-outline-variant/30">
+<div class="h-full bg-primary w-[45%]"></div>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-sm font-medium">Colloquial</span>
+<span class="text-sm font-mono font-bold">2,104</span>
+</div>
+<div class="h-[2px] w-full bg-outline-variant/30">
+<div class="h-full bg-primary w-[90%]"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Category Breakdown: Circular Graphic -->
+<div class="md:col-span-5 bg-surface-container-low p-8 rounded-lg flex flex-col justify-between">
+<div>
+<h3 class="font-headline font-bold text-lg uppercase tracking-tight">Lexical Density</h3>
+<p class="text-[10px] text-on-surface-variant font-mono mt-1">MODULE_ALPHA_04</p>
+</div>
+<div class="py-8 flex justify-center">
+<div class="relative w-48 h-48 rounded-full border-[12px] border-surface-variant flex items-center justify-center">
+<!-- Custom Segment Visualization -->
+<div class="absolute inset-[-12px] rounded-full border-[12px] border-black" style="clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 50%);"></div>
+<div class="text-center">
+<span class="block text-3xl font-headline font-bold">72%</span>
+<span class="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">Active Use</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-black rounded-full"></div>
+<span class="text-[10px] font-bold uppercase tracking-wider">Productive</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 bg-surface-variant rounded-full"></div>
+<span class="text-[10px] font-bold uppercase tracking-wider">Receptive</span>
+</div>
+</div>
+</div>
+<!-- Precision Data Table -->
+<div class="md:col-span-7 bg-surface-container-lowest border border-outline-variant/10 rounded-lg overflow-hidden">
+<div class="px-6 py-4 border-b border-surface-container flex justify-between items-center bg-surface-container-low/50">
+<h3 class="text-xs font-black uppercase tracking-[0.2em]">Acquisition Logs</h3>
+<span class="material-symbols-outlined text-sm">filter_list</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="border-b border-surface-container">
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Term_Node</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Confidence</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Interval</th>
+<th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container text-xs font-mono">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">ARCHITECTONIC</td>
+<td class="px-6 py-4">0.94</td>
+<td class="px-6 py-4">4D</td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[9px] font-bold uppercase">Stored</span></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">EPHEMERAL</td>
+<td class="px-6 py-4">0.88</td>
+<td class="px-6 py-4">12H</td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 bg-black text-white text-[9px] font-bold uppercase">Active</span></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">OSSIFIED</td>
+<td class="px-6 py-4">0.42</td>
+<td class="px-6 py-4">--</td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 border border-outline-variant text-[9px] font-bold uppercase">Review</span></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 font-bold">MONOLITH</td>
+<td class="px-6 py-4">0.99</td>
+<td class="px-6 py-4">12D</td>
+<td class="px-6 py-4"><span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[9px] font-bold uppercase">Stored</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-neutral-100 dark:bg-neutral-900 z-50 md:hidden">
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white">
+<span class="material-symbols-outlined">event_note</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Today</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-sm px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white">
+<span class="material-symbols-outlined">local_library</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white">
+<span class="material-symbols-outlined">search</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Search</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Profile</span>
+</div>
+</nav>
+</body></html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minimal Kelime Uygulaması - Session</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed-dim": "#acabab",
+                        "secondary": "#5e5e5e",
+                        "primary-container": "#3b3b3b",
+                        "surface-dim": "#dadada",
+                        "on-background": "#1a1c1c",
+                        "on-surface": "#1a1c1c",
+                        "on-secondary-container": "#1b1c1c",
+                        "on-primary-container": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "outline": "#777777",
+                        "secondary-fixed": "#c7c6c6",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#eeeeee",
+                        "tertiary-fixed": "#5d5f5f",
+                        "surface-container-low": "#f3f3f3",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "inverse-on-surface": "#f1f1f1",
+                        "inverse-primary": "#c6c6c6",
+                        "primary-fixed": "#5e5e5e",
+                        "tertiary-fixed-dim": "#454747",
+                        "tertiary-container": "#737575",
+                        "background": "#f9f9f9",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#f9f9f9",
+                        "on-tertiary-container": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#ffffff",
+                        "on-surface-variant": "#474747",
+                        "surface": "#f9f9f9",
+                        "outline-variant": "#c6c6c6",
+                        "surface-container-high": "#e8e8e8",
+                        "inverse-surface": "#2f3131",
+                        "tertiary": "#3a3c3c",
+                        "primary-fixed-dim": "#474747",
+                        "secondary-container": "#d5d4d4",
+                        "on-primary": "#e2e2e2",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "primary": "#000000",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#410002",
+                        "on-tertiary-fixed": "#ffffff",
+                        "surface-container-highest": "#e2e2e2",
+                        "surface-tint": "#5e5e5e",
+                        "on-secondary-fixed-variant": "#3b3b3c",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "on-tertiary": "#e2e2e2"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f9f9f9;
+            color: #1a1c1c;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body selection:bg-primary selection:text-white">
+<!-- Top Navigation Bar (Flashcard Session Header) -->
+<header class="fixed top-0 left-0 w-full z-50 bg-background">
+<div class="flex items-center justify-between px-6 h-16 w-full max-w-none">
+<!-- Close Button -->
+<button aria-label="Close session" class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container transition-colors active:scale-95 duration-100">
+<span class="material-symbols-outlined text-on-surface">close</span>
+</button>
+<!-- Session Progress Text -->
+<div class="flex flex-col items-center">
+<span class="font-label text-xs font-bold tracking-[0.2em] text-on-surface uppercase">7 / 18</span>
+</div>
+<!-- Empty Placeholder for Symmetry -->
+<div class="w-10"></div>
+</div>
+<!-- Thin Progress Line (Industrial Style) -->
+<div class="w-full h-[2px] bg-surface-container">
+<div class="h-full bg-primary" style="width: 38.8%;"></div>
+</div>
+</header>
+<!-- Main Flashcard Area -->
+<main class="min-h-screen pt-16 pb-24 flex flex-col items-center justify-center px-8 relative overflow-hidden">
+<!-- Background Dot Grid Texture -->
+<div class="absolute inset-0 z-0 pointer-events-none opacity-[0.03]" style="background-image: radial-gradient(#000 1px, transparent 1px); background-size: 24px 24px;"></div>
+<!-- Card Container (Poster Aesthetic) -->
+<div class="w-full max-w-2xl text-center relative z-10">
+<!-- Serial Number / Technical Label -->
+<div class="mb-12">
+<span class="font-label text-[10px] tracking-[0.3em] font-bold text-outline uppercase">Active Unit: A2_04</span>
+</div>
+<!-- Word Display -->
+<div class="flex flex-col items-center">
+<h1 class="font-headline text-7xl md:text-9xl font-bold tracking-tighter text-primary leading-none mb-4">
+                    village
+                </h1>
+<!-- Status Chip Style Label -->
+<div class="bg-secondary-container px-3 py-1 rounded-sm">
+<span class="font-label text-[11px] font-bold tracking-widest text-on-secondary-container uppercase">noun</span>
+</div>
+</div>
+<!-- Meaning Trigger -->
+<div class="mt-24">
+<button class="group relative px-10 py-4 bg-surface-container-lowest border border-outline hover:border-primary transition-all duration-300">
+<span class="font-label text-sm font-bold tracking-widest text-primary uppercase">Show meaning</span>
+<!-- Subtle Hover Effect -->
+<div class="absolute inset-0 bg-primary opacity-0 group-active:opacity-5 transition-opacity"></div>
+</button>
+</div>
+</div>
+<!-- Decorative Industrial Anchor (Bottom Left) -->
+<div class="fixed bottom-8 left-8 hidden md:block">
+<div class="flex flex-col gap-1 border-l-2 border-primary pl-4">
+<span class="font-label text-[9px] font-bold text-outline tracking-widest uppercase">Precision Learning</span>
+<span class="font-label text-[9px] font-bold text-primary tracking-widest uppercase">Lexicon v.01</span>
+</div>
+</div>
+<!-- Keybinding Hint (Industrial Style) -->
+<div class="fixed bottom-8 right-8 hidden md:flex items-center gap-4">
+<span class="font-label text-[9px] font-medium text-outline-variant tracking-widest uppercase">Press space to reveal</span>
+<div class="w-8 h-8 flex items-center justify-center border border-outline-variant text-[10px] font-bold">SPC</div>
+</div>
+</main>
+<!-- Navigation suppression: As per Task Intent, BottomNavBar is hidden in task-focused sub-pages like Flashcard Sessions to prioritize content canvas. -->
+</body></html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LEXICON - Word Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary-fixed-dim": "#474747",
+                        "tertiary-fixed-dim": "#454747",
+                        "inverse-surface": "#2f3131",
+                        "on-surface": "#1a1c1c",
+                        "on-secondary-fixed-variant": "#3b3b3c",
+                        "surface-container": "#eeeeee",
+                        "on-primary-fixed": "#ffffff",
+                        "primary-fixed": "#5e5e5e",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "on-error": "#ffffff",
+                        "tertiary-fixed": "#5d5f5f",
+                        "on-tertiary": "#e2e2e2",
+                        "secondary-fixed": "#c7c6c6",
+                        "on-tertiary-container": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#ffffff",
+                        "on-tertiary-fixed": "#ffffff",
+                        "surface-bright": "#f9f9f9",
+                        "surface-tint": "#5e5e5e",
+                        "on-primary": "#e2e2e2",
+                        "primary": "#000000",
+                        "outline-variant": "#c6c6c6",
+                        "on-tertiary-fixed-variant": "#e2e2e2",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#dadada",
+                        "tertiary": "#3a3c3c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e8e8e8",
+                        "surface-container-highest": "#e2e2e2",
+                        "inverse-on-surface": "#f1f1f1",
+                        "on-primary-fixed-variant": "#e2e2e2",
+                        "on-background": "#1a1c1c",
+                        "inverse-primary": "#c6c6c6",
+                        "surface-container-low": "#f3f3f3",
+                        "secondary-fixed-dim": "#acabab",
+                        "secondary-container": "#d5d4d4",
+                        "primary-container": "#3b3b3b",
+                        "on-error-container": "#410002",
+                        "background": "#f9f9f9",
+                        "surface": "#f9f9f9",
+                        "tertiary-container": "#737575",
+                        "on-surface-variant": "#474747",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#1b1c1c",
+                        "surface-variant": "#e2e2e2",
+                        "outline": "#777777",
+                        "secondary": "#5e5e5e"
+                    },
+                    fontFamily: {
+                        "headline": ["Space Grotesk"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .dot-matrix {
+            background-image: radial-gradient(circle, #c6c6c6 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-white">
+<!-- Top Navigation -->
+<header class="fixed top-0 w-full z-50 bg-neutral-50 dark:bg-neutral-950 flex items-center justify-between px-6 h-16 w-full">
+<div class="flex items-center gap-4">
+<button class="hover:bg-neutral-200 transition-colors p-2 rounded-sm active:scale-95 duration-100">
+<span class="material-symbols-outlined text-black">menu</span>
+</button>
+<span class="text-xl font-black tracking-tighter text-black font-['Space_Grotesk'] uppercase">LEXICON</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="hover:bg-neutral-200 transition-colors p-2 rounded-sm active:scale-95 duration-100">
+<span class="material-symbols-outlined text-black">search</span>
+</button>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-4xl mx-auto relative min-h-screen">
+<!-- Background Grid Decoration -->
+<div class="fixed inset-0 dot-matrix pointer-events-none"></div>
+<!-- Hero Section -->
+<section class="relative mb-12 flex justify-between items-start">
+<div class="space-y-1">
+<p class="font-headline text-[10px] tracking-[0.2em] text-outline uppercase font-bold">Entry ID: 0842-VL</p>
+<h1 class="font-headline text-7xl font-bold tracking-tighter text-black">village</h1>
+<h2 class="font-headline text-3xl text-outline-variant font-light lowercase">köy</h2>
+</div>
+<button class="p-3 bg-surface-container-low hover:bg-surface-container transition-colors rounded-lg group">
+<span class="material-symbols-outlined text-black group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</section>
+<!-- Technical Specs / Learning Status Card -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-0 bg-surface-container border border-outline-variant/20 rounded-lg overflow-hidden mb-12">
+<div class="p-6 border-b md:border-b-0 md:border-r border-outline-variant/20 bg-surface-container-lowest">
+<p class="font-headline text-[10px] tracking-widest text-outline uppercase mb-2">Status</p>
+<p class="font-headline text-lg font-bold uppercase text-black">LEARNING</p>
+</div>
+<div class="p-6 border-b md:border-b-0 md:border-r border-outline-variant/20">
+<p class="font-headline text-[10px] tracking-widest text-outline uppercase mb-2">Last Seen</p>
+<p class="font-headline text-lg font-bold uppercase text-black">TODAY</p>
+</div>
+<div class="p-6">
+<p class="font-headline text-[10px] tracking-widest text-outline uppercase mb-2">Next Review</p>
+<p class="font-headline text-lg font-bold uppercase text-black underline underline-offset-4 decoration-2">IN 2 DAYS</p>
+</div>
+</section>
+<!-- Context & Examples -->
+<section class="space-y-8">
+<div class="flex items-center gap-4">
+<h3 class="font-headline text-sm font-black tracking-widest uppercase">Contextual Usage</h3>
+<div class="h-[1px] flex-grow bg-outline-variant/30"></div>
+<span class="font-headline text-[10px] text-outline">5 SAMPLES</span>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<!-- Example 1 -->
+<div class="group p-6 bg-surface-container-low hover:bg-surface-container-lowest transition-all border-l-4 border-black">
+<p class="text-on-surface-variant leading-relaxed italic">
+                        The small <span class="text-black font-bold not-italic">village</span> was nestled deep within the valley, hidden from the main road.
+                    </p>
+</div>
+<!-- Example 2 -->
+<div class="group p-6 bg-surface-container-low hover:bg-surface-container-lowest transition-all border-l-4 border-outline-variant">
+<p class="text-on-surface-variant leading-relaxed italic">
+                        Life in the <span class="text-black font-bold not-italic">village</span> moves at a much slower pace than in the bustling city.
+                    </p>
+</div>
+<!-- Example 3 -->
+<div class="group p-6 bg-surface-container-low hover:bg-surface-container-lowest transition-all border-l-4 border-outline-variant">
+<p class="text-on-surface-variant leading-relaxed italic">
+                        Every elder in the <span class="text-black font-bold not-italic">village</span> has a story about the great flood of 1954.
+                    </p>
+</div>
+<!-- Example 4 -->
+<div class="group p-6 bg-surface-container-low hover:bg-surface-container-lowest transition-all border-l-4 border-outline-variant">
+<p class="text-on-surface-variant leading-relaxed italic">
+                        They decided to hike to the next <span class="text-black font-bold not-italic">village</span> before the sun set.
+                    </p>
+</div>
+<!-- Example 5 -->
+<div class="group p-6 bg-surface-container-low hover:bg-surface-container-lowest transition-all border-l-4 border-outline-variant">
+<p class="text-on-surface-variant leading-relaxed italic">
+                        Modern technology is slowly reaching even the most remote <span class="text-black font-bold not-italic">village</span> in the region.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Technical Imagery / Abstract Placeholder -->
+<section class="mt-16 mb-12">
+<div class="aspect-[21/9] w-full bg-surface-container-highest rounded-lg overflow-hidden relative">
+<img alt="Mist covering a remote mountain village" class="w-full h-full object-cover grayscale contrast-125 opacity-80 mix-blend-multiply" data-alt="Mist covering a remote mountain village" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAevAt1H_gwd6_OBSzLRj8rXjDCedY0OaWWezr9GV0lrRHuvUu2zcGOSBTi8qYIWEXAwq0pO2zjymkedT7xaY9L3hOSmc1ly3K2yKlAfTmUdn2y5KAa5MOR38PPGUA4pYxelbTKdJj50h8nQZ89-iVJW4seBf8gSXv2jCHkhDtSEheljOXRiBqgiwacHIs1Tpe8OrE5tYtfJEVwp1-Qoia1uPrP9tEnT7vVmMsibBJWqONM_lE-za7jlgnzgjEqPSVJQZYRN1eKzaM5"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+<div class="absolute bottom-4 left-6">
+<p class="font-headline text-[10px] text-white/70 tracking-[0.3em] uppercase">Visual Reference // Locality</p>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Actions Shell -->
+<footer class="fixed bottom-0 left-0 w-full bg-white border-t border-neutral-200 z-50 h-24 flex items-center px-6">
+<div class="max-w-4xl mx-auto w-full flex flex-col md:flex-row gap-4 items-center justify-between">
+<div class="flex gap-2 w-full md:w-auto">
+<button class="flex-1 md:flex-none px-6 py-3 bg-black text-white font-headline text-xs font-bold tracking-widest uppercase hover:bg-primary-container transition-colors active:scale-95 duration-100">
+                    ADD TO REVIEW LIST
+                </button>
+<button class="px-4 py-3 bg-surface-container text-black font-headline text-xs font-bold tracking-widest uppercase hover:bg-surface-container-highest transition-colors active:scale-95 duration-100">
+                    DEACTIVATE
+                </button>
+</div>
+<button class="hidden md:flex items-center gap-2 group">
+<span class="font-headline text-[10px] font-bold tracking-widest uppercase group-hover:underline">ADD TO FAVORITES</span>
+<span class="material-symbols-outlined text-black" style="font-variation-settings: 'FILL' 0;">bookmark</span>
+</button>
+</div>
+</footer>
+<!-- Bottom Navigation (Shared Component Logic - Suppressed for Task-Focused Word Detail) -->
+<!-- Note: BottomNavBar is hidden here as per the "Task-Focused Suppression" rule in the Prompt -->
+</body></html>

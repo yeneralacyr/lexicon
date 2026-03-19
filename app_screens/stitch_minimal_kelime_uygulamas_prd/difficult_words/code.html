@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LEXICON - Difficult Words</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed": "#5e5e5e",
+              "inverse-primary": "#c6c6c6",
+              "tertiary-fixed": "#5d5f5f",
+              "surface-container-low": "#f3f3f3",
+              "on-primary-fixed-variant": "#e2e2e2",
+              "inverse-on-surface": "#f1f1f1",
+              "surface-container": "#eeeeee",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#c7c6c6",
+              "outline": "#777777",
+              "surface-variant": "#e2e2e2",
+              "on-primary-container": "#ffffff",
+              "on-surface": "#1a1c1c",
+              "on-secondary-container": "#1b1c1c",
+              "surface-dim": "#dadada",
+              "primary-container": "#3b3b3b",
+              "on-background": "#1a1c1c",
+              "secondary": "#5e5e5e",
+              "secondary-fixed-dim": "#acabab",
+              "on-tertiary-fixed-variant": "#e2e2e2",
+              "on-tertiary": "#e2e2e2",
+              "surface-tint": "#5e5e5e",
+              "on-secondary-fixed-variant": "#3b3b3c",
+              "on-tertiary-fixed": "#ffffff",
+              "on-error-container": "#410002",
+              "surface-container-highest": "#e2e2e2",
+              "primary": "#000000",
+              "on-error": "#ffffff",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-container": "#d5d4d4",
+              "on-primary": "#e2e2e2",
+              "primary-fixed-dim": "#474747",
+              "tertiary": "#3a3c3c",
+              "surface-container-high": "#e8e8e8",
+              "outline-variant": "#c6c6c6",
+              "inverse-surface": "#2f3131",
+              "surface": "#f9f9f9",
+              "on-tertiary-container": "#ffffff",
+              "on-primary-fixed": "#ffffff",
+              "error": "#ba1a1a",
+              "on-surface-variant": "#474747",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f9f9f9",
+              "tertiary-fixed-dim": "#454747",
+              "tertiary-container": "#737575",
+              "surface-container-lowest": "#ffffff",
+              "background": "#f9f9f9"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .dot-grid {
+        background-image: radial-gradient(circle, #c6c6c6 1px, transparent 1px);
+        background-size: 12px 12px;
+        opacity: 0.3;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-neutral-100 dark:bg-neutral-900 border-b-0 flex items-center justify-between px-6 h-16 w-full max-w-none">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors p-2 rounded-sm active:scale-95 duration-100">
+                menu_open
+            </button>
+<span class="text-2xl font-black tracking-tighter text-black dark:text-white uppercase font-['Space_Grotesk']">LEXICON</span>
+</div>
+<div class="hidden md:flex items-center space-x-8">
+<a class="text-neutral-500 dark:text-neutral-400 font-['Inter'] text-[10px] uppercase tracking-widest font-bold hover:text-black dark:hover:text-white" href="#">Today</a>
+<a class="text-black dark:text-white font-bold font-['Inter'] text-[10px] uppercase tracking-widest hover:text-black dark:hover:text-white" href="#">Library</a>
+<a class="text-neutral-500 dark:text-neutral-400 font-['Inter'] text-[10px] uppercase tracking-widest font-bold hover:text-black dark:hover:text-white" href="#">Search</a>
+<a class="text-neutral-500 dark:text-neutral-400 font-['Inter'] text-[10px] uppercase tracking-widest font-bold hover:text-black dark:hover:text-white" href="#">Profile</a>
+</div>
+<div class="flex items-center">
+<button class="material-symbols-outlined text-black dark:text-white">notifications</button>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-5xl mx-auto min-h-screen relative">
+<!-- Background Texture -->
+<div class="fixed inset-0 dot-grid pointer-events-none -z-10"></div>
+<!-- Hero Section -->
+<section class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<span class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-2 block">Archive System / V.04</span>
+<h1 class="font-headline text-5xl md:text-6xl font-black tracking-tightest leading-none">Needs Review</h1>
+</div>
+<div class="bg-surface-container-high px-4 py-2 rounded-lg flex items-center gap-3">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div>
+<p class="font-label text-[10px] uppercase font-bold text-on-surface-variant">Critical Mass</p>
+<p class="text-xl font-headline font-bold">14 Words</p>
+</div>
+</div>
+</div>
+<div class="h-px w-full bg-outline-variant/20 mt-8"></div>
+</section>
+<!-- Bento Stats / Filter -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<div class="md:col-span-2 bg-surface-container-low p-6 rounded-xl flex flex-col justify-between group cursor-pointer transition-colors hover:bg-surface-container border border-transparent hover:border-outline-variant/20">
+<div class="flex justify-between items-start">
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-on-surface-variant">Last Session Performance</span>
+<span class="material-symbols-outlined text-outline">analytics</span>
+</div>
+<div class="mt-8">
+<div class="flex items-baseline gap-2">
+<span class="text-4xl font-headline font-bold">42%</span>
+<span class="text-error text-sm font-bold flex items-center"><span class="material-symbols-outlined text-xs">arrow_downward</span> -12%</span>
+</div>
+<p class="text-on-surface-variant text-sm mt-1">Accuracy plummeted in 'Advanced Adjectives' module.</p>
+</div>
+</div>
+<div class="bg-primary p-6 rounded-xl flex flex-col justify-between text-on-primary active:scale-[0.98] transition-transform">
+<div>
+<span class="font-label text-[10px] uppercase tracking-widest font-bold text-on-primary/60">Flashcards</span>
+<h3 class="text-2xl font-headline font-bold mt-2">Retry All<br/>Difficulties</h3>
+</div>
+<div class="flex justify-end mt-4">
+<span class="material-symbols-outlined text-4xl">arrow_forward_ios</span>
+</div>
+</div>
+</section>
+<!-- Words List -->
+<section class="space-y-4">
+<div class="flex items-center justify-between mb-6 px-2">
+<h2 class="font-label text-xs uppercase tracking-widest font-black text-on-surface-variant">Entry Catalog</h2>
+<div class="flex gap-4">
+<button class="text-[10px] font-bold uppercase tracking-widest border-b-2 border-primary pb-1">All</button>
+<button class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant pb-1">Wrong Only</button>
+<button class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant pb-1">Hard Only</button>
+</div>
+</div>
+<!-- List Entries -->
+<div class="space-y-2">
+<!-- Entry 1 -->
+<div class="group flex flex-col md:flex-row md:items-center bg-surface-container-lowest p-6 rounded-lg transition-all hover:bg-white hover:shadow-2xl hover:shadow-black/[0.02] border border-transparent hover:border-outline-variant/30">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-1">
+<span class="w-1.5 h-1.5 bg-error rounded-full"></span>
+<h3 class="text-2xl font-headline font-bold tracking-tight">Obfuscate</h3>
+<span class="font-label text-[10px] uppercase px-2 py-0.5 bg-error-container text-on-error-container font-bold rounded-sm">Wrong</span>
+</div>
+<p class="text-on-surface-variant italic font-serif opacity-80">v. Bulanıklaştırmak, zihnini karıştırmak</p>
+</div>
+<div class="mt-4 md:mt-0 flex items-center gap-6">
+<div class="text-right hidden md:block">
+<p class="font-label text-[10px] uppercase font-bold text-on-surface-variant opacity-60">Success Rate</p>
+<p class="font-headline font-bold text-lg">0%</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded font-label text-[10px] uppercase tracking-widest font-black active:scale-95 transition-all">Retry</button>
+</div>
+</div>
+<!-- Entry 2 -->
+<div class="group flex flex-col md:flex-row md:items-center bg-surface-container-lowest p-6 rounded-lg transition-all hover:bg-white hover:shadow-2xl hover:shadow-black/[0.02] border border-transparent hover:border-outline-variant/30">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-1">
+<span class="w-1.5 h-1.5 bg-tertiary-fixed rounded-full"></span>
+<h3 class="text-2xl font-headline font-bold tracking-tight">Equanimity</h3>
+<span class="font-label text-[10px] uppercase px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold rounded-sm">Hard</span>
+</div>
+<p class="text-on-surface-variant italic font-serif opacity-80">n. Sükunet, itidal, ağırbaşlılık</p>
+</div>
+<div class="mt-4 md:mt-0 flex items-center gap-6">
+<div class="text-right hidden md:block">
+<p class="font-label text-[10px] uppercase font-bold text-on-surface-variant opacity-60">Success Rate</p>
+<p class="font-headline font-bold text-lg">25%</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded font-label text-[10px] uppercase tracking-widest font-black active:scale-95 transition-all">Retry</button>
+</div>
+</div>
+<!-- Entry 3 -->
+<div class="group flex flex-col md:flex-row md:items-center bg-surface-container-lowest p-6 rounded-lg transition-all hover:bg-white hover:shadow-2xl hover:shadow-black/[0.02] border border-transparent hover:border-outline-variant/30">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-1">
+<span class="w-1.5 h-1.5 bg-error rounded-full"></span>
+<h3 class="text-2xl font-headline font-bold tracking-tight">Fastidious</h3>
+<span class="font-label text-[10px] uppercase px-2 py-0.5 bg-error-container text-on-error-container font-bold rounded-sm">Wrong</span>
+</div>
+<p class="text-on-surface-variant italic font-serif opacity-80">adj. Titiz, müşkülpesent</p>
+</div>
+<div class="mt-4 md:mt-0 flex items-center gap-6">
+<div class="text-right hidden md:block">
+<p class="font-label text-[10px] uppercase font-bold text-on-surface-variant opacity-60">Success Rate</p>
+<p class="font-headline font-bold text-lg">10%</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded font-label text-[10px] uppercase tracking-widest font-black active:scale-95 transition-all">Retry</button>
+</div>
+</div>
+<!-- Entry 4 -->
+<div class="group flex flex-col md:flex-row md:items-center bg-surface-container-lowest p-6 rounded-lg transition-all hover:bg-white hover:shadow-2xl hover:shadow-black/[0.02] border border-transparent hover:border-outline-variant/30">
+<div class="flex-1">
+<div class="flex items-center gap-3 mb-1">
+<span class="w-1.5 h-1.5 bg-tertiary-fixed rounded-full"></span>
+<h3 class="text-2xl font-headline font-bold tracking-tight">Capricious</h3>
+<span class="font-label text-[10px] uppercase px-2 py-0.5 bg-secondary-container text-on-secondary-container font-bold rounded-sm">Hard</span>
+</div>
+<p class="text-on-surface-variant italic font-serif opacity-80">adj. Kaprisli, değişken, maymun iştahlı</p>
+</div>
+<div class="mt-4 md:mt-0 flex items-center gap-6">
+<div class="text-right hidden md:block">
+<p class="font-label text-[10px] uppercase font-bold text-on-surface-variant opacity-60">Success Rate</p>
+<p class="font-headline font-bold text-lg">33%</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2 rounded font-label text-[10px] uppercase tracking-widest font-black active:scale-95 transition-all">Retry</button>
+</div>
+</div>
+</div>
+<!-- More Items Hint -->
+<div class="flex justify-center py-12">
+<button class="text-on-surface-variant font-label text-[10px] uppercase tracking-[0.3em] font-bold border-b border-outline-variant/50 pb-2 hover:text-black transition-colors">Load Remaining Artifacts</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full h-20 bg-neutral-100 dark:bg-neutral-900 flex justify-around items-center px-4 pb-safe z-50">
+<a class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white" href="#">
+<span class="material-symbols-outlined">event_note</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold mt-1">Today</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-sm px-4 py-1 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined">local_library</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold mt-1">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white" href="#">
+<span class="material-symbols-outlined">search</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold mt-1">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black dark:hover:text-white" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold mt-1">Profile</span>
+</a>
+</nav>
+<!-- Contextual FAB (Hidden on this screen per instructions as it is a focused review/list) -->
+</body></html>

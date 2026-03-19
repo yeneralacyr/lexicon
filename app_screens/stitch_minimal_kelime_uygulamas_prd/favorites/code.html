@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed": "#5e5e5e",
+              "inverse-primary": "#c6c6c6",
+              "tertiary-fixed": "#5d5f5f",
+              "surface-container-low": "#f3f3f3",
+              "on-primary-fixed-variant": "#e2e2e2",
+              "inverse-on-surface": "#f1f1f1",
+              "surface-container": "#eeeeee",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#c7c6c6",
+              "outline": "#777777",
+              "surface-variant": "#e2e2e2",
+              "on-primary-container": "#ffffff",
+              "on-surface": "#1a1c1c",
+              "on-secondary-container": "#1b1c1c",
+              "surface-dim": "#dadada",
+              "primary-container": "#3b3b3b",
+              "on-background": "#1a1c1c",
+              "secondary": "#5e5e5e",
+              "secondary-fixed-dim": "#acabab",
+              "on-tertiary-fixed-variant": "#e2e2e2",
+              "on-tertiary": "#e2e2e2",
+              "surface-tint": "#5e5e5e",
+              "on-secondary-fixed-variant": "#3b3b3c",
+              "on-tertiary-fixed": "#ffffff",
+              "on-error-container": "#410002",
+              "surface-container-highest": "#e2e2e2",
+              "primary": "#000000",
+              "on-error": "#ffffff",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-container": "#d5d4d4",
+              "on-primary": "#e2e2e2",
+              "primary-fixed-dim": "#474747",
+              "tertiary": "#3a3c3c",
+              "surface-container-high": "#e8e8e8",
+              "outline-variant": "#c6c6c6",
+              "inverse-surface": "#2f3131",
+              "surface": "#f9f9f9",
+              "on-tertiary-container": "#ffffff",
+              "on-primary-fixed": "#ffffff",
+              "error": "#ba1a1a",
+              "on-surface-variant": "#474747",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f9f9f9",
+              "tertiary-fixed-dim": "#454747",
+              "tertiary-container": "#737575",
+              "surface-container-lowest": "#ffffff",
+              "background": "#f9f9f9"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .dot-matrix {
+            background-image: radial-gradient(circle, #c6c6c6 1px, transparent 1px);
+            background-size: 12px 12px;
+            opacity: 0.3;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface selection:bg-primary selection:text-white">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 border-b-0 bg-neutral-100 dark:bg-neutral-900 flex items-center justify-between px-6 h-16 w-full max-w-none">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors active:scale-95 duration-100 p-2 rounded">
+                menu_open
+            </button>
+<span class="text-2xl font-black tracking-tighter text-black dark:text-white uppercase font-['Space_Grotesk']">LEXICON</span>
+</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="text-neutral-500 dark:text-neutral-400 font-['Inter'] uppercase tracking-widest text-[10px] font-bold hover:text-black transition-colors" href="#">Today</a>
+<a class="text-black dark:text-white font-bold font-['Inter'] uppercase tracking-widest text-[10px]" href="#">Library</a>
+<a class="text-neutral-500 dark:text-neutral-400 font-['Inter'] uppercase tracking-widest text-[10px] font-bold hover:text-black transition-colors" href="#">Search</a>
+<a class="text-neutral-500 dark:text-neutral-400 font-['Inter'] uppercase tracking-widest text-[10px] font-bold hover:text-black transition-colors" href="#">Profile</a>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</div>
+</header>
+<main class="pt-24 pb-32 min-h-screen max-w-4xl mx-auto px-6">
+<!-- Hero Header -->
+<section class="mb-16 relative">
+<div class="absolute -top-10 -left-10 w-40 h-40 dot-matrix -z-10"></div>
+<div class="flex flex-col gap-2">
+<span class="font-label text-[10px] uppercase tracking-[0.2em] font-bold text-outline">Collection_01</span>
+<h1 class="font-headline text-5xl md:text-7xl font-black tracking-tighter text-primary leading-none">LIBRARY</h1>
+</div>
+<div class="mt-8 flex justify-between items-end">
+<p class="text-on-surface-variant max-w-xs body-md">
+                    Archived lexicon and starred translations. Managed for immediate recall.
+                </p>
+<div class="flex gap-2">
+<button class="bg-surface-container-highest px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-outline-variant transition-colors">Filter</button>
+<button class="bg-primary text-white px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-primary-container transition-colors">Add New</button>
+</div>
+</div>
+</section>
+<!-- Favorites List -->
+<div class="flex flex-col gap-0 border-t-2 border-primary">
+<!-- Entry 1 -->
+<div class="group flex items-center justify-between py-8 border-b border-surface-container transition-all hover:bg-surface-container-low px-4">
+<div class="flex flex-col gap-1">
+<span class="font-label text-[10px] text-outline uppercase tracking-widest">En / Tr</span>
+<div class="flex items-baseline gap-6">
+<h2 class="font-headline text-3xl font-bold tracking-tight text-primary">Ephemeral</h2>
+<span class="material-symbols-outlined text-outline-variant text-sm">arrow_forward</span>
+<h3 class="font-headline text-2xl text-on-surface-variant font-medium">Geçici</h3>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex flex-col items-end">
+<span class="text-[10px] font-mono text-outline uppercase">added_24.05.24</span>
+<span class="text-[10px] font-mono text-outline uppercase">ref_091</span>
+</div>
+<button class="p-3 bg-surface-container-lowest hover:bg-error hover:text-white transition-all rounded-full group/btn">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+</button>
+</div>
+</div>
+<!-- Entry 2 -->
+<div class="group flex items-center justify-between py-8 border-b border-surface-container transition-all hover:bg-surface-container-low px-4">
+<div class="flex flex-col gap-1">
+<span class="font-label text-[10px] text-outline uppercase tracking-widest">En / Tr</span>
+<div class="flex items-baseline gap-6">
+<h2 class="font-headline text-3xl font-bold tracking-tight text-primary">Resilience</h2>
+<span class="material-symbols-outlined text-outline-variant text-sm">arrow_forward</span>
+<h3 class="font-headline text-2xl text-on-surface-variant font-medium">Dayanıklılık</h3>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex flex-col items-end">
+<span class="text-[10px] font-mono text-outline uppercase">added_22.05.24</span>
+<span class="text-[10px] font-mono text-outline uppercase">ref_084</span>
+</div>
+<button class="p-3 bg-surface-container-lowest hover:bg-error hover:text-white transition-all rounded-full group/btn">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+</button>
+</div>
+</div>
+<!-- Entry 3 -->
+<div class="group flex items-center justify-between py-8 border-b border-surface-container transition-all hover:bg-surface-container-low px-4">
+<div class="flex flex-col gap-1">
+<span class="font-label text-[10px] text-outline uppercase tracking-widest">En / Tr</span>
+<div class="flex items-baseline gap-6">
+<h2 class="font-headline text-3xl font-bold tracking-tight text-primary">Serendipity</h2>
+<span class="material-symbols-outlined text-outline-variant text-sm">arrow_forward</span>
+<h3 class="font-headline text-2xl text-on-surface-variant font-medium">Tesadüf</h3>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex flex-col items-end">
+<span class="text-[10px] font-mono text-outline uppercase">added_21.05.24</span>
+<span class="text-[10px] font-mono text-outline uppercase">ref_072</span>
+</div>
+<button class="p-3 bg-surface-container-lowest hover:bg-error hover:text-white transition-all rounded-full group/btn">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+</button>
+</div>
+</div>
+<!-- Entry 4 -->
+<div class="group flex items-center justify-between py-8 border-b border-surface-container transition-all hover:bg-surface-container-low px-4">
+<div class="flex flex-col gap-1">
+<span class="font-label text-[10px] text-outline uppercase tracking-widest">En / Tr</span>
+<div class="flex items-baseline gap-6">
+<h2 class="font-headline text-3xl font-bold tracking-tight text-primary">Ambiguity</h2>
+<span class="material-symbols-outlined text-outline-variant text-sm">arrow_forward</span>
+<h3 class="font-headline text-2xl text-on-surface-variant font-medium">Belirsizlik</h3>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="hidden md:flex flex-col items-end">
+<span class="text-[10px] font-mono text-outline uppercase">added_18.05.24</span>
+<span class="text-[10px] font-mono text-outline uppercase">ref_056</span>
+</div>
+<button class="p-3 bg-surface-container-lowest hover:bg-error hover:text-white transition-all rounded-full group/btn">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State Hint (Subtle) -->
+<div class="mt-20 py-10 border-2 border-dashed border-outline-variant flex flex-col items-center justify-center text-center opacity-50">
+<span class="material-symbols-outlined text-4xl mb-2">add_circle</span>
+<span class="font-label text-[10px] uppercase tracking-widest">End of archived records</span>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-neutral-100 dark:bg-neutral-900 z-50">
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black">
+<span class="material-symbols-outlined">event_note</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Today</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-sm px-4 py-1 transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined">local_library</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black">
+<span class="material-symbols-outlined">search</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Search</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 transition-all duration-200 ease-in-out hover:text-black">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Profile</span>
+</div>
+</nav>
+<!-- Contextual FAB (Only on main library view) -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-primary text-white flex items-center justify-center rounded-full shadow-none active:scale-95 transition-transform md:bottom-10">
+<span class="material-symbols-outlined">add</span>
+</button>
+</body></html>

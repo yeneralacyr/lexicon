@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "lexicon-expo-qRLSB9",
-    "slug": "lexicon-expo-qRLSB9",
+    "name": "Lexicon",
+    "slug": "lexicon",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "lexiconexpoqrlsb9",
-    "userInterfaceStyle": "automatic",
+    "scheme": "lexicon",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -28,13 +28,15 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#F4F1EA",
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

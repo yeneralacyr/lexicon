@@ -1,98 +1,141 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
+import { TechnicalLabel } from '@/components/ui/technical-label';
+import { fontFamilies, palette, spacing } from '@/constants/theme';
+import { getSettings } from '@/modules/progress/progress.service';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
+export default function Index() {
+  useEffect(() => {
+    let active = true;
+
+    async function routeNext() {
+      const [settings] = await Promise.all([
+        getSettings(),
+        new Promise((resolve) => setTimeout(resolve, 900)),
+      ]);
+
+      if (!active) {
+        return;
+      }
+
+      router.replace(settings.onboardingCompleted ? '/today' : '/onboarding');
+    }
+
+    void routeNext();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <DotMatrixBackground opacity={0.1} />
 
-export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+        <View style={styles.centerBlock}>
+          <TechnicalLabel style={styles.serial}>System.v1.0.4 • Minimal.Kernel</TechnicalLabel>
+          <View style={styles.logoBlock}>
+            <Text style={styles.logo}>LEXICON</Text>
+            <View style={styles.underline} />
+          </View>
+          <TechnicalLabel style={styles.motto}>Learn slowly, remember longer</TechnicalLabel>
+        </View>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        <View style={styles.footer}>
+          <View style={styles.progressTrack}>
+            <View style={styles.progressFill} />
+          </View>
+          <View style={styles.progressMeta}>
+            <TechnicalLabel color="rgba(71,71,71,0.6)" style={styles.progressText}>
+              Loading modules
+            </TechnicalLabel>
+            <TechnicalLabel color="rgba(71,71,71,0.6)" style={styles.progressText}>
+              34%
+            </TechnicalLabel>
+          </View>
+          <TechnicalLabel color="rgba(71,71,71,0.35)" style={styles.footnote}>
+            © 2024 Industrial Monolith Design
+          </TechnicalLabel>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: palette.background,
   },
-  heroSection: {
+  container: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: spacing.xxxxl,
+    paddingBottom: spacing.xxl,
+  },
+  centerBlock: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    width: '100%',
   },
-  title: {
+  serial: {
+    opacity: 0.6,
+    textAlign: 'center',
+    marginBottom: spacing.xxxl,
+  },
+  logoBlock: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  logo: {
+    fontFamily: fontFamilies.displayBold,
+    fontSize: 72,
+    lineHeight: 72,
+    letterSpacing: -4,
+    color: palette.primary,
+  },
+  underline: {
+    width: 52,
+    height: 2,
+    backgroundColor: palette.primary,
+  },
+  motto: {
+    marginTop: spacing.xl,
     textAlign: 'center',
   },
-  code: {
-    textTransform: 'uppercase',
+  footer: {
+    width: '100%',
+    maxWidth: 280,
+    gap: spacing.sm,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  progressTrack: {
+    height: 1,
+    backgroundColor: 'rgba(198,198,198,0.55)',
+  },
+  progressFill: {
+    width: '34%',
+    height: '100%',
+    backgroundColor: palette.primary,
+  },
+  progressMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  progressText: {
+    letterSpacing: 1.6,
+  },
+  footnote: {
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    fontSize: 8,
+    letterSpacing: 4,
   },
 });

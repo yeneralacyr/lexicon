@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LEXICON - LIBRARY</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed-dim": "#474747",
+              "tertiary-fixed-dim": "#454747",
+              "inverse-surface": "#2f3131",
+              "on-surface": "#1a1c1c",
+              "on-secondary-fixed-variant": "#3b3b3c",
+              "surface-container": "#eeeeee",
+              "on-primary-fixed": "#ffffff",
+              "primary-fixed": "#5e5e5e",
+              "on-secondary-fixed": "#1b1c1c",
+              "on-error": "#ffffff",
+              "tertiary-fixed": "#5d5f5f",
+              "on-tertiary": "#e2e2e2",
+              "secondary-fixed": "#c7c6c6",
+              "on-tertiary-container": "#ffffff",
+              "error-container": "#ffdad6",
+              "on-primary-container": "#ffffff",
+              "on-tertiary-fixed": "#ffffff",
+              "surface-bright": "#f9f9f9",
+              "surface-tint": "#5e5e5e",
+              "on-primary": "#e2e2e2",
+              "primary": "#000000",
+              "outline-variant": "#c6c6c6",
+              "on-tertiary-fixed-variant": "#e2e2e2",
+              "error": "#ba1a1a",
+              "surface-dim": "#dadada",
+              "tertiary": "#3a3c3c",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-high": "#e8e8e8",
+              "surface-container-highest": "#e2e2e2",
+              "inverse-on-surface": "#f1f1f1",
+              "on-primary-fixed-variant": "#e2e2e2",
+              "on-background": "#1a1c1c",
+              "inverse-primary": "#c6c6c6",
+              "surface-container-low": "#f3f3f3",
+              "secondary-fixed-dim": "#acabab",
+              "secondary-container": "#d5d4d4",
+              "primary-container": "#3b3b3b",
+              "on-error-container": "#410002",
+              "background": "#f9f9f9",
+              "surface": "#f9f9f9",
+              "tertiary-container": "#737575",
+              "on-surface-variant": "#474747",
+              "on-secondary": "#ffffff",
+              "on-secondary-container": "#1b1c1c",
+              "surface-variant": "#e2e2e2",
+              "outline": "#777777",
+              "secondary": "#5e5e5e"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f9f9f9;
+            color: #1a1c1c;
+            -webkit-font-smoothing: antialiased;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-black selection:text-white min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-neutral-50 flex items-center justify-between px-6 h-16 border-b border-neutral-100">
+<div class="flex items-center gap-4">
+<button class="hover:bg-neutral-200 transition-colors p-2 rounded-sm active:scale-95 duration-100">
+<span class="material-symbols-outlined text-black">menu</span>
+</button>
+<span class="font-headline tracking-tighter font-black uppercase text-xl text-black">LEXICON</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="hover:bg-neutral-200 transition-colors p-2 rounded-sm active:scale-95 duration-100">
+<span class="material-symbols-outlined text-black">search</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-32 px-6 max-w-4xl mx-auto">
+<!-- Hero Section: Library Stats -->
+<section class="mb-10">
+<h1 class="font-headline font-bold text-5xl tracking-tighter text-black mb-2 uppercase">LIBRARY</h1>
+<p class="font-label text-[10px] uppercase tracking-[0.2em] text-on-surface-variant opacity-60">3000 words • 248 learned</p>
+</section>
+<!-- Filters: Industrial Technical Chips -->
+<nav class="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-4 scrollbar-hide">
+<button class="px-5 py-1.5 bg-black text-white text-[10px] font-bold tracking-[0.1em] rounded-sm">ALL</button>
+<button class="px-5 py-1.5 bg-transparent border border-neutral-200 text-on-surface-variant text-[10px] font-bold tracking-[0.1em] rounded-sm hover:border-black transition-colors">NEW</button>
+<button class="px-5 py-1.5 bg-transparent border border-neutral-200 text-on-surface-variant text-[10px] font-bold tracking-[0.1em] rounded-sm hover:border-black transition-colors">LEARNING</button>
+<button class="px-5 py-1.5 bg-transparent border border-neutral-200 text-on-surface-variant text-[10px] font-bold tracking-[0.1em] rounded-sm hover:border-black transition-colors">REVIEW</button>
+<button class="px-5 py-1.5 bg-transparent border border-neutral-200 text-on-surface-variant text-[10px] font-bold tracking-[0.1em] rounded-sm hover:border-black transition-colors">STRONG</button>
+<button class="px-5 py-1.5 bg-transparent border border-neutral-200 text-on-surface-variant text-[10px] font-bold tracking-[0.1em] rounded-sm hover:border-black transition-colors">FAVORITES</button>
+</nav>
+<!-- Word List: Premium Minimalist Rows -->
+<div class="divide-y divide-neutral-200 border-t border-b border-neutral-200">
+<!-- Row 1 -->
+<div class="group flex items-center justify-between py-6 bg-transparent hover:bg-neutral-50 transition-colors duration-200">
+<div class="flex flex-col">
+<span class="text-xl font-headline font-bold tracking-tight text-black uppercase">village</span>
+<span class="text-xs font-body text-neutral-500 mt-0.5">köy</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[9px] font-bold tracking-widest px-2 py-1 border border-neutral-200 text-neutral-400 uppercase rounded-sm">NEW</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="group flex items-center justify-between py-6 bg-transparent hover:bg-neutral-50 transition-colors duration-200">
+<div class="flex flex-col">
+<span class="text-xl font-headline font-bold tracking-tight text-black uppercase">spoon</span>
+<span class="text-xs font-body text-neutral-500 mt-0.5">kaşık</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[9px] font-bold tracking-widest px-2 py-1 border border-neutral-200 text-neutral-400 uppercase rounded-sm">REVIEW</span>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="group flex items-center justify-between py-6 bg-transparent hover:bg-neutral-50 transition-colors duration-200">
+<div class="flex flex-col">
+<span class="text-xl font-headline font-bold tracking-tight text-black uppercase">come</span>
+<span class="text-xs font-body text-neutral-500 mt-0.5">gelmek</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[9px] font-bold tracking-widest px-2 py-1 border border-neutral-200 text-neutral-400 uppercase rounded-sm">NEW</span>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="group flex items-center justify-between py-6 bg-transparent hover:bg-neutral-50 transition-colors duration-200">
+<div class="flex flex-col">
+<span class="text-xl font-headline font-bold tracking-tight text-black uppercase">door</span>
+<span class="text-xs font-body text-neutral-500 mt-0.5">kapı</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[9px] font-bold tracking-widest px-2 py-1 border border-neutral-200 text-neutral-400 uppercase rounded-sm">LEARNING</span>
+</div>
+</div>
+<!-- Row 5 -->
+<div class="group flex items-center justify-between py-6 bg-transparent hover:bg-neutral-50 transition-colors duration-200">
+<div class="flex flex-col">
+<span class="text-xl font-headline font-bold tracking-tight text-black uppercase">mountain</span>
+<span class="text-xs font-body text-neutral-500 mt-0.5">dağ</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[9px] font-bold tracking-widest px-2 py-1 bg-neutral-100 text-neutral-400 uppercase rounded-sm">STRONG</span>
+</div>
+</div>
+</div>
+<!-- Pagination -->
+<div class="mt-12 flex justify-center">
+<button class="px-8 py-3 border border-black font-label text-[10px] font-bold tracking-[0.2em] uppercase hover:bg-black hover:text-white transition-all duration-300 rounded-sm">
+                LOAD MORE ENTRIES
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-white border-t border-neutral-200 z-50">
+<div class="flex flex-col items-center justify-center bg-black text-white rounded-sm px-4 py-1 transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">LIBRARY</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 px-4 py-1 hover:text-black transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined">search</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">SEARCH</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 px-4 py-1 hover:text-black transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined">bookmark</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-[0.05em] font-bold mt-1">SAVED</span>
+</div>
+</nav>
+<!-- Background Decoration: Dot Matrix -->
+<div class="fixed inset-0 pointer-events-none -z-10 opacity-[0.03]" style="background-image: radial-gradient(#000 1px, transparent 0); background-size: 24px 24px;"></div>
+</body></html>

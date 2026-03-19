@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary-fixed": "#5e5e5e",
+              "inverse-primary": "#c6c6c6",
+              "tertiary-fixed": "#5d5f5f",
+              "surface-container-low": "#f3f3f3",
+              "on-primary-fixed-variant": "#e2e2e2",
+              "inverse-on-surface": "#f1f1f1",
+              "surface-container": "#eeeeee",
+              "on-secondary": "#ffffff",
+              "secondary-fixed": "#c7c6c6",
+              "outline": "#777777",
+              "surface-variant": "#e2e2e2",
+              "on-primary-container": "#ffffff",
+              "on-surface": "#1a1c1c",
+              "on-secondary-container": "#1b1c1c",
+              "surface-dim": "#dadada",
+              "primary-container": "#3b3b3b",
+              "on-background": "#1a1c1c",
+              "secondary": "#5e5e5e",
+              "secondary-fixed-dim": "#acabab",
+              "on-tertiary-fixed-variant": "#e2e2e2",
+              "on-tertiary": "#e2e2e2",
+              "surface-tint": "#5e5e5e",
+              "on-secondary-fixed-variant": "#3b3b3c",
+              "on-tertiary-fixed": "#ffffff",
+              "on-error-container": "#410002",
+              "surface-container-highest": "#e2e2e2",
+              "primary": "#000000",
+              "on-error": "#ffffff",
+              "on-secondary-fixed": "#1b1c1c",
+              "secondary-container": "#d5d4d4",
+              "on-primary": "#e2e2e2",
+              "primary-fixed-dim": "#474747",
+              "tertiary": "#3a3c3c",
+              "surface-container-high": "#e8e8e8",
+              "outline-variant": "#c6c6c6",
+              "inverse-surface": "#2f3131",
+              "surface": "#f9f9f9",
+              "on-tertiary-container": "#ffffff",
+              "on-primary-fixed": "#ffffff",
+              "error": "#ba1a1a",
+              "on-surface-variant": "#474747",
+              "error-container": "#ffdad6",
+              "surface-bright": "#f9f9f9",
+              "tertiary-fixed-dim": "#454747",
+              "tertiary-container": "#737575",
+              "surface-container-lowest": "#ffffff",
+              "background": "#f9f9f9"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .dot-matrix {
+            background-image: radial-gradient(circle, #c6c6c6 1px, transparent 1px);
+            background-size: 12px 12px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- TopAppBar Shell -->
+<header class="fixed top-0 w-full z-50 flex items-center justify-between px-6 h-16 bg-neutral-100 dark:bg-neutral-900 border-b-0 shadow-none">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-black dark:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors p-2 rounded-sm active:scale-95 duration-100">
+                menu_open
+            </button>
+<span class="text-2xl font-black tracking-tighter text-black dark:text-white uppercase font-['Space_Grotesk']">LEXICON</span>
+</div>
+<div class="flex gap-6">
+<span class="text-black dark:text-white font-bold cursor-pointer font-['Space_Grotesk'] text-sm tracking-tighter">DAILY</span>
+<span class="text-neutral-500 dark:text-neutral-400 cursor-pointer font-['Space_Grotesk'] text-sm tracking-tighter">ANALYTICS</span>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-2xl mx-auto min-h-screen">
+<!-- Hero Streak Section -->
+<section class="relative mb-12 flex flex-col items-center">
+<div class="absolute inset-0 dot-matrix opacity-20 -z-10"></div>
+<div class="text-center py-8">
+<p class="font-label text-xs uppercase tracking-[0.2em] text-on-surface-variant font-bold mb-2">CURRENT STATUS</p>
+<h1 class="font-headline text-[12rem] leading-none font-black tracking-tighter text-primary">7</h1>
+<div class="inline-block bg-primary text-on-primary px-4 py-1 mt-4">
+<p class="font-label text-[10px] uppercase tracking-[0.3em] font-black">STREAK MAINTAINED</p>
+</div>
+</div>
+</section>
+<!-- Stats Grid (Bento Style) -->
+<div class="grid grid-cols-2 gap-4 mb-12">
+<div class="bg-surface-container-lowest p-6 flex flex-col justify-between aspect-square border-b-2 border-primary">
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Best Record</span>
+<div>
+<span class="font-headline text-4xl font-bold">14</span>
+<span class="font-label text-xs ml-1">DAYS</span>
+</div>
+</div>
+<div class="bg-surface-container p-6 flex flex-col justify-between aspect-square">
+<span class="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">Completion</span>
+<div>
+<span class="font-headline text-4xl font-bold">100%</span>
+<span class="font-label text-xs block text-on-surface-variant">THIS WEEK</span>
+</div>
+</div>
+</div>
+<!-- Calendar Component -->
+<section class="bg-surface-container-low p-8 rounded-lg">
+<div class="flex justify-between items-center mb-10">
+<h3 class="font-headline text-xl font-bold tracking-tight uppercase">Activity Log</h3>
+<span class="font-label text-[10px] text-on-surface-variant uppercase tracking-widest">October 2023</span>
+</div>
+<div class="grid grid-cols-7 gap-y-8 gap-x-2 text-center">
+<!-- Day Labels -->
+<div class="font-label text-[9px] font-bold text-outline uppercase">M</div>
+<div class="font-label text-[9px] font-bold text-outline uppercase">T</div>
+<div class="font-label text-[9px] font-bold text-outline uppercase">W</div>
+<div class="font-label text-[9px] font-bold text-outline uppercase">T</div>
+<div class="font-label text-[9px] font-bold text-outline uppercase">F</div>
+<div class="font-label text-[9px] font-bold text-outline uppercase">S</div>
+<div class="font-label text-[9px] font-bold text-outline uppercase">S</div>
+<!-- Calendar Dots/Days -->
+<!-- Week 1 (Partial) -->
+<div class="text-xs text-outline-variant py-2">25</div>
+<div class="text-xs text-outline-variant py-2">26</div>
+<div class="text-xs text-outline-variant py-2">27</div>
+<div class="text-xs text-outline-variant py-2">28</div>
+<div class="text-xs text-outline-variant py-2">29</div>
+<div class="text-xs text-outline-variant py-2">30</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">1</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<!-- Week 2 -->
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">2</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">3</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">4</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">5</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">6</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-black bg-primary text-on-primary w-6 h-6 flex items-center justify-center rounded-sm">7</span>
+<div class="w-1.5 h-1.5 bg-primary rounded-full"></div>
+</div>
+<div class="relative py-2 flex flex-col items-center gap-1">
+<span class="text-xs font-bold">8</span>
+<div class="w-1.5 h-1.5 border border-outline-variant rounded-full"></div>
+</div>
+</div>
+</section>
+<!-- Affirmation Footer -->
+<footer class="mt-16 border-t border-outline-variant pt-8 text-center">
+<p class="font-body text-sm text-on-surface-variant italic mb-6">"Discipline is the bridge between goals and accomplishment."</p>
+<button class="bg-primary text-on-primary w-full py-4 font-label font-bold text-xs uppercase tracking-[0.2em] transition-all active:scale-[0.98]">
+                LOG TODAY'S SESSION
+            </button>
+</footer>
+</main>
+<!-- BottomNavBar Shell -->
+<nav class="fixed bottom-0 left-0 w-full h-20 flex justify-around items-center px-4 pb-safe bg-neutral-100 dark:bg-neutral-900 z-50">
+<div class="flex flex-col items-center justify-center bg-black dark:bg-white text-white dark:text-black rounded-sm px-4 py-1 transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined" data-icon="event_note">event_note</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Today</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 hover:text-black dark:hover:text-white transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined" data-icon="local_library">local_library</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Library</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 hover:text-black dark:hover:text-white transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Search</span>
+</div>
+<div class="flex flex-col items-center justify-center text-neutral-500 dark:text-neutral-400 px-4 py-1 hover:text-black dark:hover:text-white transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-['Inter'] text-[10px] uppercase tracking-widest font-bold">Profile</span>
+</div>
+</nav>
+</body></html>

@@ -1,56 +1,53 @@
-# Welcome to your Expo app 👋
+# Lexicon 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+**Lexicon**, İngilizce kelime dağarcığınızı geliştirmek için tasarlanmış, **minimalist** ve **odak odaklı** bir mobil uygulamadır.
 
-## Get started
+Bu uygulama, karmaşık özelliklerden ve dikkat dağıtıcı unsurlardan arındırılmış, sadece öğrenmeye odaklanan "sessiz" bir araç olma vizyonuyla geliştirilmiştir.
 
-1. Install dependencies
+## 🎯 Temel Özellikler
 
-   ```bash
-   npm install
-   ```
+-   **Local-First Mimari:** Tüm verileriniz (kelimeler, ilerleme, ayarlar) doğrudan cihazınızda saklanır. İnternet bağlantısı gerektirmez, backend veya login süreçleriyle vakit kaybetmezsiniz.
+-   **Minimalist Tasarım:** "Nothing Phone" estetiğinden ilham alan, monokrom ağırlıklı, temiz ve modern bir kullanıcı arayüzü.
+-   **Akıllı Tekrar Sistemi:** Spaced Repetition (Aralıklı Tekrar) mantığıyla çalışan günlük oturumlar sayesinde kelimeleri unutmadan kalıcı hafızaya aktarın.
+-   **SQLite Altyapısı:** Veri tutarlılığı ve yüksek performans için Expo-SQLite kullanılmıştır.
+-   **Favoriler & Arama:** Öğrenmek istediğiniz kelimeleri favorilere ekleyin veya kapsamlı arama özelliğiyle istediğiniz kelimeye anında ulaşın.
 
-2. Start the app
+## 🛠️ Teknik Altyapı
 
-   ```bash
-   npx expo start
-   ```
+-   **Framework:** [Expo](https://expo.dev) & [React Native](https://reactnative.dev)
+-   **Dil:** [TypeScript](https://www.typescriptlang.org)
+-   **Veritabanı:** `expo-sqlite` (Yerel veri saklama)
+-   **Durum Yönetimi:** `zustand` (Hafif ve hızlı state management)
+-   **Tasarım:** Özel tasarım sistemi (Monochrome, Space Grotesk/Inter fontları)
 
-In the output, you'll find options to open the app in a
+## 🚀 Başlarken
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Bağımlılıkları Yükleyin
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Uygulamayı Başlatın
 
-### Other setup steps
+```bash
+npx expo start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Buradan sonra:
+- **Android Emulator** için `a` tuşuna basın.
+- **iOS Simulator** için `i` tuşuna basın.
+- **Expo Go** uygulamasıyla fiziksel cihazınızda test edin.
 
-## Learn more
+## 🎨 Tasarım Felsefesi
 
-To learn more about developing your project with Expo, look at the following resources:
+Lexicon, bir oyun gibi sizi sürekli bildirimlerle rahatsız eden bir uygulama değildir. Bunun yerine, her gün açıp 5 dakikanızı ayıracağınız, endüstriyel ve şık bir araçtır.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+-   Büyük ve cesur tipografi.
+-   Gereksiz ikon kalabalığından uzak duruş.
+-   Sert ama temiz hizalamalar.
+-   Nefes alan beyaz boşluklar.
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Geliştiren: [yeneralacyr](https://github.com/yeneralacyr)

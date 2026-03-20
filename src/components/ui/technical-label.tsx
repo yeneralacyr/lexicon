@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle } from 'react-native';
 
-import { fontFamilies, palette } from '@/constants/theme';
+import { fontFamilies } from '@/constants/theme';
+import { useAppTheme } from '@/theme/app-theme-provider';
 
 type TechnicalLabelProps = {
   children: React.ReactNode;
@@ -9,16 +10,21 @@ type TechnicalLabelProps = {
   color?: string;
 };
 
-export function TechnicalLabel({ children, color = palette.muted, style }: TechnicalLabelProps) {
-  return <Text style={[styles.label, { color }, style]}>{children}</Text>;
+export function TechnicalLabel({ children, color, style }: TechnicalLabelProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(), []);
+
+  return <Text style={[styles.label, { color: color ?? colors.muted }, style]}>{children}</Text>;
 }
 
-const styles = StyleSheet.create({
-  label: {
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 10,
-    lineHeight: 14,
-    letterSpacing: 2.4,
-    textTransform: 'uppercase',
-  },
-});
+function createStyles() {
+  return StyleSheet.create({
+    label: {
+      fontFamily: fontFamilies.bodyBold,
+      fontSize: 10,
+      lineHeight: 14,
+      letterSpacing: 2.4,
+      textTransform: 'uppercase',
+    },
+  });
+}

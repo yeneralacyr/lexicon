@@ -1,6 +1,5 @@
 import type { BuildDailySessionResult, ReviewDashboardSnapshot } from '@/modules/review/review.types';
-import type { Rating } from '@/types/progress';
-import type { SessionSummary } from '@/types/session';
+import type { SessionDecision, SessionQuizDetail, SessionSummary } from '@/types/session';
 
 export type SessionMode = 'daily' | 'review_only' | 'new_only';
 
@@ -16,14 +15,37 @@ export async function buildDailySession(_: SessionMode = 'daily'): Promise<Build
   unsupported();
 }
 
-export async function applySessionRating(_: {
+export async function applySessionDecision(_: {
   sessionId: string;
   sessionItemId: number;
   wordId: number;
-  rating: Rating;
-  completedItems: number;
+  decision: SessionDecision;
+  durationMs: number;
+  currentOrderIndex: number;
+  selectedSentenceIndex: number | null;
+}) {
+  unsupported();
+}
+
+export async function beginSessionQuiz(_: string) {
+  unsupported();
+}
+
+export async function getSessionQuizSnapshot(_: string): Promise<SessionQuizDetail | null> {
+  unsupported();
+}
+
+export async function submitSessionQuizAnswer(_: {
+  sessionId: string;
+  wordId: number;
+  answer: string;
+  expectedNormalizedMeaning: string;
   durationMs: number;
 }) {
+  unsupported();
+}
+
+export async function finalizeQuizSession(_: string) {
   unsupported();
 }
 

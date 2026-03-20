@@ -433,6 +433,7 @@ export async function exportProgressSnapshotRepository(): Promise<ProgressExport
     wordProgress: await readTableRows(db, 'word_progress'),
     sessions: await readTableRows(db, 'sessions'),
     sessionItems: await readTableRows(db, 'session_items'),
+    sessionQuizItems: await readTableRows(db, 'session_quiz_items'),
     dailyStats: await readTableRows(db, 'daily_stats'),
   };
 }

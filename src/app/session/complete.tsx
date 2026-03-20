@@ -1,21 +1,24 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TopBar } from '@/components/navigation/top-bar';
 import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
+import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
-import { fontFamilies, layout, palette, spacing } from '@/constants/theme';
+import { fontFamilies, layout, spacing, type AppPalette } from '@/constants/theme';
 import { buildDailySession, getSessionSummarySnapshot } from '@/modules/review/review.engine';
 import { useSessionStore } from '@/store/sessionStore';
+import { useAppTheme } from '@/theme/app-theme-provider';
 import type { SessionSummary } from '@/types/session';
 
 export default function SessionCompleteScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ sessionId?: string | string[] }>();
   const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
@@ -63,7 +66,7 @@ export default function SessionCompleteScreen() {
       }
 
       setActiveSessionId(session.id);
-      router.replace(`/session/${session.id}`);
+      router.replace(session.phase === 'quiz' ? `/session/quiz/${session.id}` : `/session/${session.id}`);
     } finally {
       setIsStartingReview(false);
     }
@@ -73,44 +76,45 @@ export default function SessionCompleteScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <TopBar
-        align="left"
-        leftAction={{ icon: 'arrow-back', onPress: () => router.replace('/today') }}
-        rightAction={{ icon: 'settings', onPress: () => router.push('/settings') }}
-      />
-
       <View style={styles.container}>
         <DotMatrixBackground opacity={0.15} />
 
         <View style={styles.content}>
+          <View style={styles.edgeControls}>
+            <EdgeIconButton icon="arrow-back" onPress={() => router.replace('/today')} />
+            <EdgeIconButton icon="settings" onPress={() => router.push('/settings')} />
+          </View>
+
           <View style={styles.serialBlock}>
-            <TechnicalLabel color="rgba(71,71,71,0.9)">
-              Session ID: {summary?.id ?? sessionId ?? 'UNKNOWN'}
+            <TechnicalLabel color={colors.muted}>
+              Oturum ID: {summary?.id ?? sessionId ?? 'BİLİNMİYOR'}
             </TechnicalLabel>
             <View style={styles.serialRule} />
           </View>
 
           <View style={styles.heroBlock}>
-            <Text style={styles.heroTitle}>{summary?.completedItems ?? 0} words completed</Text>
-            <Text style={styles.heroSubtitle}>Daily objective reached</Text>
+            <ResponsiveDisplayText numberOfLines={2} style={styles.heroTitle} variant="hero">
+              {`${summary?.completedItems ?? 0} kart tamamlandı`}
+            </ResponsiveDisplayText>
+            <Text style={styles.heroSubtitle}>Bugünkü döngü başarıyla kapandı</Text>
           </View>
 
           <View style={[styles.metricsGrid, isWide && styles.metricsGridWide]}>
             <MetricTile
               icon="history"
-              label="Reviews"
+              label="Tekrar"
               tone="low"
               value={summary?.reviewItems ?? 0}
             />
             <MetricTile
               icon="add-circle-outline"
-              label="New"
+              label="Yeni"
               tone="default"
               value={summary?.newItems ?? 0}
             />
             <MetricTile
               icon="event-available"
-              label="Words scheduled for tomorrow"
+              label="Yarın için planlanan kelimeler"
               tone="high"
               value={summary?.tomorrowCount ?? 0}
             />
@@ -118,15 +122,15 @@ export default function SessionCompleteScreen() {
 
           <View style={styles.separator}>
             <View style={styles.separatorLine} />
-            <TechnicalLabel color="rgba(119,119,119,0.8)" style={styles.separatorLabel}>
-              End of Sequence
+            <TechnicalLabel color={colors.muted} style={styles.separatorLabel}>
+              Seri Sonu
             </TechnicalLabel>
             <View style={styles.separatorLine} />
           </View>
 
           <View style={[styles.actionRow, isWide && styles.actionRowWide]}>
             <ActionButton
-              label="Finish Today"
+              label="Günü Bitir"
               onPress={() => {
                 setActiveSessionId(null);
                 router.replace('/today');
@@ -134,7 +138,7 @@ export default function SessionCompleteScreen() {
               style={styles.primaryAction}
             />
             <ActionButton
-              label={isStartingReview ? 'Preparing review...' : 'Start Review Session'}
+              label={isStartingReview ? 'Tekrar hazırlanıyor...' : 'Tekrar Oturumuna Başla'}
               onPress={() => {
                 void handleRereview();
               }}
@@ -145,6 +149,23 @@ export default function SessionCompleteScreen() {
         </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+function EdgeIconButton({
+  icon,
+  onPress,
+}: {
+  icon: keyof typeof MaterialIcons.glyphMap;
+  onPress: () => void;
+}) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.edgeButton, pressed && styles.pressed]}>
+      <MaterialIcons color={colors.primary} name={icon} size={22} />
+    </Pressable>
   );
 }
 
@@ -159,6 +180,9 @@ function MetricTile({
   tone: 'low' | 'default' | 'high';
   value: number;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View
       style={[
@@ -167,7 +191,7 @@ function MetricTile({
         tone === 'default' && styles.metricTileDefault,
         tone === 'high' && styles.metricTileHigh,
       ]}>
-      <MaterialIcons color={palette.outline} name={icon} size={20} />
+      <MaterialIcons color={colors.outline} name={icon} size={20} />
       <View style={styles.metricTextBlock}>
         <Text style={styles.metricValue}>{value}</Text>
         <Text style={styles.metricLabel}>{label}</Text>
@@ -176,14 +200,15 @@ function MetricTile({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppPalette) {
+  return StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
-    backgroundColor: palette.background,
+    backgroundColor: colors.background,
     justifyContent: 'center',
   },
   content: {
@@ -194,6 +219,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxxl,
     alignItems: 'center',
   },
+  edgeControls: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  edgeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+  },
   serialBlock: {
     alignItems: 'center',
     marginBottom: spacing.xxxl,
@@ -201,7 +241,7 @@ const styles = StyleSheet.create({
   serialRule: {
     width: 48,
     height: 2,
-    backgroundColor: palette.primary,
+    backgroundColor: colors.primary,
     marginTop: spacing.sm,
   },
   heroBlock: {
@@ -209,13 +249,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxxl,
   },
   heroTitle: {
-    fontFamily: fontFamilies.displayBold,
-    fontSize: 64,
-    lineHeight: 64,
-    letterSpacing: -3.2,
-    color: palette.primary,
     textAlign: 'center',
     maxWidth: 760,
+    alignSelf: 'center',
   },
   heroSubtitle: {
     marginTop: spacing.sm,
@@ -224,7 +260,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     letterSpacing: 2.2,
     textTransform: 'uppercase',
-    color: palette.muted,
+    color: colors.muted,
     textAlign: 'center',
   },
   metricsGrid: {
@@ -241,13 +277,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   metricTileLow: {
-    backgroundColor: palette.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
   },
   metricTileDefault: {
-    backgroundColor: palette.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
   },
   metricTileHigh: {
-    backgroundColor: palette.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
   },
   metricTextBlock: {
     alignItems: 'flex-start',
@@ -256,7 +292,7 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.displayBold,
     fontSize: 36,
     lineHeight: 36,
-    color: palette.primary,
+    color: colors.primary,
   },
   metricLabel: {
     marginTop: spacing.xs,
@@ -265,7 +301,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: 1.8,
     textTransform: 'uppercase',
-    color: palette.muted,
+    color: colors.muted,
+    flexShrink: 1,
   },
   separator: {
     width: '100%',
@@ -278,7 +315,7 @@ const styles = StyleSheet.create({
   separatorLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(198,198,198,0.5)',
+    backgroundColor: colors.border,
   },
   separatorLabel: {
     letterSpacing: 1.6,
@@ -297,4 +334,8 @@ const styles = StyleSheet.create({
   secondaryAction: {
     flex: 1,
   },
-});
+  pressed: {
+    opacity: 0.72,
+  },
+  });
+}

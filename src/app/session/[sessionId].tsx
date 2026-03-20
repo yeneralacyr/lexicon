@@ -1,30 +1,38 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import type { StudyCardPhase } from '@/components/session/study-card';
+import { StudyCardStack } from '@/components/session/study-card-stack';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
-import { StatusChip } from '@/components/ui/status-chip';
 import { TechnicalLabel } from '@/components/ui/technical-label';
-import { fontFamilies, palette, spacing } from '@/constants/theme';
-import { applySessionRating, finalizeSession } from '@/modules/review/review.engine';
+import { fontFamilies, layout, spacing, type AppPalette } from '@/constants/theme';
+import { applySessionDecision, beginSessionQuiz } from '@/modules/review/review.engine';
 import { getSessionDetail } from '@/modules/sessions/sessions.service';
 import { useSessionStore } from '@/store/sessionStore';
-import type { Rating } from '@/types/progress';
-import type { SessionDetail, SessionQueueItem } from '@/types/session';
+import { useAppTheme } from '@/theme/app-theme-provider';
+import type { SessionDecision, SessionDetail, SessionQueueItem } from '@/types/session';
 
 export default function SessionScreen() {
   const params = useLocalSearchParams<{ sessionId?: string | string[] }>();
   const sessionId = Array.isArray(params.sessionId) ? params.sessionId[0] : params.sessionId;
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [cardPhase, setCardPhase] = useState<StudyCardPhase>('word_only');
+  const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemStartedAt, setItemStartedAt] = useState(() => Date.now());
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [resetKey, setResetKey] = useState(0);
+  const isTransitioningRef = useRef(false);
+  const countdownDeadlineRef = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -44,8 +52,7 @@ export default function SessionScreen() {
 
       if (active) {
         setSession(nextSession);
-        const firstUnratedIndex = nextSession.items.findIndex((item) => !item.resultRating);
-        setCurrentIndex(firstUnratedIndex === -1 ? Math.max(0, nextSession.items.length - 1) : firstUnratedIndex);
+        setCurrentIndex(resolveNextUnratedIndex(nextSession));
       }
     }
 
@@ -61,10 +68,16 @@ export default function SessionScreen() {
       return;
     }
 
-    if (session.totalItems > 0 && session.items.every((item) => item.resultRating)) {
-      void handleFinish();
+    if (session.status === 'quiz') {
+      setActiveSessionId(session.id);
+      router.replace(`/session/quiz/${session.id}`);
+      return;
     }
-  }, [session, sessionId]);
+
+    if (session.status === 'active' && session.totalItems > 0 && session.items.every((item) => item.resultRating)) {
+      void handleTransitionToQuiz();
+    }
+  }, [router, session, sessionId, setActiveSessionId]);
 
   const activeItem = useMemo<SessionQueueItem | null>(() => {
     if (!session) {
@@ -74,81 +87,166 @@ export default function SessionScreen() {
     return session.items[currentIndex] ?? null;
   }, [currentIndex, session]);
 
-  useEffect(() => {
-    if (activeItem?.id) {
-      setItemStartedAt(Date.now());
+  const nextItem = useMemo<SessionQueueItem | null>(() => {
+    if (!session) {
+      return null;
     }
+
+    return session.items[currentIndex + 1] ?? null;
+  }, [currentIndex, session]);
+
+  useEffect(() => {
+    if (!activeItem?.id) {
+      return;
+    }
+
+    setItemStartedAt(Date.now());
+    setCardPhase('word_only');
+    setCountdownRemaining(null);
+    setSubmitError(null);
   }, [activeItem?.id]);
+
+  useEffect(() => {
+    if (cardPhase !== 'meaning_reveal') {
+      countdownDeadlineRef.current = null;
+      return;
+    }
+
+    countdownDeadlineRef.current = Date.now() + 5000;
+    setCountdownRemaining(5);
+
+    const interval = setInterval(() => {
+      if (!countdownDeadlineRef.current) {
+        return;
+      }
+
+      const remainingMs = countdownDeadlineRef.current - Date.now();
+
+      if (remainingMs <= 0) {
+        setCardPhase('word_with_sentence');
+        setCountdownRemaining(null);
+        countdownDeadlineRef.current = null;
+        clearInterval(interval);
+        return;
+      }
+
+      setCountdownRemaining(Math.max(1, Math.ceil(remainingMs / 1000)));
+    }, 100);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [cardPhase]);
+
+  async function reloadSession() {
+    if (!sessionId) {
+      return null;
+    }
+
+    const nextSession = await getSessionDetail(sessionId);
+
+    if (!nextSession) {
+      throw new Error('Oturum yüklenemedi.');
+    }
+
+    setSession(nextSession);
+    setCurrentIndex(resolveNextUnratedIndex(nextSession));
+    return nextSession;
+  }
 
   async function handleClose() {
     setActiveSessionId(null);
     router.replace('/today');
   }
 
-  async function handleFinish() {
-    if (!sessionId) {
+  async function handleTransitionToQuiz() {
+    if (!sessionId || isTransitioningRef.current) {
       return;
     }
 
-    await finalizeSession(sessionId);
-    setActiveSessionId(null);
-    router.replace(`/session/complete?sessionId=${sessionId}`);
+    isTransitioningRef.current = true;
+
+    try {
+      await beginSessionQuiz(sessionId);
+      setActiveSessionId(sessionId);
+      router.replace(`/session/quiz/${sessionId}`);
+    } finally {
+      isTransitioningRef.current = false;
+    }
   }
 
-  async function handleRating(rating: Rating) {
+  async function handleDecision(decision: SessionDecision) {
     if (!session || !activeItem || !sessionId || isSubmitting) {
       return;
     }
 
     setIsSubmitting(true);
-
-    const nextCompletedItems = Math.min(session.totalItems, session.completedItems + 1);
+    setSubmitError(null);
 
     try {
-      await applySessionRating({
+      const result = await applySessionDecision({
         sessionId,
         sessionItemId: activeItem.id,
         wordId: activeItem.wordId,
-        rating,
-        completedItems: nextCompletedItems,
+        decision,
         durationMs: Math.max(0, Date.now() - itemStartedAt),
+        currentOrderIndex: activeItem.orderIndex,
+        selectedSentenceIndex: activeItem.selectedSentenceIndex,
       });
 
-      const nextItems = session.items.map((item) =>
-        item.id === activeItem.id ? { ...item, resultRating: rating } : item
-      );
-
-      setSession({
-        ...session,
-        completedItems: nextCompletedItems,
-        items: nextItems,
-      });
-
-      setRevealed(false);
-
-      if (currentIndex >= session.totalItems - 1) {
-        await handleFinish();
+      if (!result) {
+        setSubmitError('Bu kart zaten işlendi. Deste tekrar hizalandı.');
+        setResetKey((value) => value + 1);
         return;
       }
 
-      setCurrentIndex((value) => value + 1);
+      const nextSession = await reloadSession();
+
+      if (nextSession && nextSession.items.every((item) => item.resultRating)) {
+        await handleTransitionToQuiz();
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Bu karar kaydedilemedi.');
+      setResetKey((value) => value + 1);
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  function handleReveal() {
+    if (cardPhase !== 'word_only') {
+      return;
+    }
+
+    setCountdownRemaining(5);
+    setCardPhase('meaning_reveal');
+  }
+
   const progressValue =
-    session && session.totalItems > 0 ? `${Math.min(currentIndex + 1, session.totalItems)} / ${session.totalItems}` : '0 / 0';
+    session && session.totalItems > 0
+      ? `${Math.min(currentIndex + 1, session.totalItems)} / ${session.totalItems}`
+      : '0 / 0';
   const progressWidth =
-    session && session.totalItems > 0 ? ((Math.min(currentIndex + 1, session.totalItems)) / session.totalItems) * 100 : 0;
+    session && session.totalItems > 0 ? (Math.min(currentIndex + 1, session.totalItems) / session.totalItems) * 100 : 0;
   const isWide = width >= 768;
+  const stackWidth = Math.min(width - spacing.lg * 2, isWide ? 540 : 388);
+  const stackHeight = Math.min(Math.max(486, stackWidth * 1.3), 610);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => void handleClose()} style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}>
-            <MaterialIcons color={palette.primary} name="close" size={24} />
+          <Pressable
+            disabled={isSubmitting}
+            onPress={() => {
+              void handleClose();
+            }}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && styles.pressed,
+              isSubmitting && styles.headerButtonDisabled,
+            ]}>
+            <MaterialIcons color={colors.primary} name="close" size={24} />
           </Pressable>
 
           <View style={styles.progressLabelWrap}>
@@ -168,270 +266,183 @@ export default function SessionScreen() {
 
         <View style={styles.content}>
           <View style={styles.labelBlock}>
-            <TechnicalLabel color="rgba(119,119,119,0.9)">
-              Active Unit: {activeItem ? `A2_${String(activeItem.orderIndex + 1).padStart(2, '0')}` : '----'}
+            <TechnicalLabel color={colors.muted}>
+              {activeItem ? `Kart ${String((activeItem.orderIndex ?? 0) + 1).padStart(2, '0')}` : 'Kart hazırlanıyor'}
             </TechnicalLabel>
           </View>
 
-          <View style={styles.wordBlock}>
-            <Text style={styles.word}>{activeItem?.english ?? '...'}</Text>
-            <StatusChip
-              active
-              label={activeItem ? activeItem.promptType.replace('_', ' ') : 'loading'}
-              style={styles.wordChip}
-            />
-          </View>
+          <StudyCardStack
+            activeItem={activeItem}
+            countdownRemaining={countdownRemaining}
+            height={stackHeight}
+            isSubmitting={isSubmitting}
+            nextItem={nextItem}
+            onDecide={handleDecision}
+            onReveal={handleReveal}
+            phase={cardPhase}
+            resetKey={resetKey}
+            width={stackWidth}
+          />
 
-          {!revealed ? (
-            <View style={styles.revealWrap}>
-              <Pressable
-                disabled={!activeItem}
-                onPress={() => setRevealed(true)}
-                style={({ pressed }) => [
-                  styles.revealButton,
-                  pressed && styles.pressed,
-                  !activeItem && styles.revealButtonDisabled,
-                ]}>
-                <Text style={styles.revealButtonText}>Show meaning</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.answerWrap}>
-              <TechnicalLabel color="rgba(119,119,119,0.75)" style={styles.answerLabel}>
-                Translation
+          <View style={styles.metaBlock}>
+            {submitError ? (
+              <Text style={styles.errorText}>{submitError}</Text>
+            ) : (
+              <TechnicalLabel color={colors.muted} style={styles.metaText}>
+                {getGuidanceText({ cardPhase, isSubmitting, countdownRemaining })}
               </TechnicalLabel>
-              <Text style={styles.meaning}>{activeItem?.turkish ?? 'Unavailable'}</Text>
-              {activeItem?.sentence ? <Text style={styles.sentence}>{activeItem.sentence}</Text> : null}
-
-              <View style={[styles.ratingGrid, isWide && styles.ratingGridWide]}>
-                {ratings.map((ratingItem) => (
-                  <Pressable
-                    key={ratingItem.value}
-                    disabled={isSubmitting}
-                    onPress={() => {
-                      void handleRating(ratingItem.value);
-                    }}
-                    style={({ pressed }) => [
-                      styles.ratingButton,
-                      ratingItem.tone === 'dark' && styles.ratingButtonDark,
-                      pressed && styles.pressed,
-                      isSubmitting && styles.ratingButtonDisabled,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.ratingLabel,
-                        ratingItem.tone === 'dark' ? styles.ratingLabelDark : styles.ratingLabelLight,
-                      ]}>
-                      {ratingItem.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
         {isWide ? (
-          <>
-            <View style={styles.leftAnchor}>
-              <View style={styles.leftAnchorRule} />
-              <View>
-                <TechnicalLabel color="rgba(119,119,119,0.95)">Precision Learning</TechnicalLabel>
-                <TechnicalLabel color={palette.primary}>Lexicon v.01</TechnicalLabel>
-              </View>
+          <View style={styles.leftAnchor}>
+            <View style={styles.leftAnchorRule} />
+            <View style={styles.leftAnchorCopy}>
+              <TechnicalLabel color={colors.muted}>Dokun, bekle, sonra kaydır</TechnicalLabel>
+              <TechnicalLabel color={colors.primary}>Sola tekrar · yukarı zaten biliyordum · sağa ezberledim</TechnicalLabel>
             </View>
-          </>
+          </View>
         ) : null}
       </View>
     </SafeAreaView>
   );
 }
 
-const ratings: Array<{ value: Rating; label: string; tone: 'light' | 'dark' }> = [
-  { value: 'again', label: 'Again', tone: 'light' },
-  { value: 'hard', label: 'Hard', tone: 'light' },
-  { value: 'good', label: 'Good', tone: 'dark' },
-  { value: 'easy', label: 'Easy', tone: 'dark' },
-];
+function resolveNextUnratedIndex(session: SessionDetail) {
+  const firstUnratedIndex = session.items.findIndex((item) => !item.resultRating);
+  return firstUnratedIndex === -1 ? Math.max(0, session.items.length - 1) : firstUnratedIndex;
+}
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  header: {
-    backgroundColor: palette.background,
-  },
-  headerRow: {
-    height: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressLabelWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 12,
-    lineHeight: 14,
-    letterSpacing: 2.4,
-    textTransform: 'uppercase',
-    color: palette.primary,
-  },
-  headerPlaceholder: {
-    width: 40,
-    height: 40,
-  },
-  progressTrack: {
-    height: 2,
-    backgroundColor: palette.surfaceContainer,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: palette.primary,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: palette.background,
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  content: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.xxxxl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  labelBlock: {
-    marginBottom: spacing.xxxl,
-  },
-  wordBlock: {
-    alignItems: 'center',
-  },
-  word: {
-    fontFamily: fontFamilies.displayBold,
-    fontSize: 88,
-    lineHeight: 88,
-    letterSpacing: -4,
-    color: palette.primary,
-    textAlign: 'center',
-  },
-  wordChip: {
-    marginTop: spacing.sm,
-  },
-  revealWrap: {
-    marginTop: spacing.xxxxl,
-  },
-  revealButton: {
-    minHeight: 60,
-    paddingHorizontal: spacing.xxxl,
-    borderWidth: 1,
-    borderColor: palette.outline,
-    backgroundColor: palette.surfaceContainerLowest,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  revealButtonDisabled: {
-    opacity: 0.5,
-  },
-  revealButtonText: {
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 13,
-    lineHeight: 16,
-    letterSpacing: 2.8,
-    textTransform: 'uppercase',
-    color: palette.primary,
-  },
-  answerWrap: {
-    width: '100%',
-    maxWidth: 720,
-    marginTop: spacing.xxxxl,
-    alignItems: 'center',
-  },
-  answerLabel: {
-    marginBottom: spacing.xs,
-  },
-  meaning: {
-    fontFamily: fontFamilies.displayMedium,
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -1,
-    color: palette.primary,
-    textAlign: 'center',
-  },
-  sentence: {
-    marginTop: spacing.lg,
-    maxWidth: 520,
-    fontFamily: fontFamilies.bodyRegular,
-    fontSize: 17,
-    lineHeight: 28,
-    color: palette.muted,
-    textAlign: 'center',
-  },
-  ratingGrid: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    marginTop: spacing.xxxl,
-  },
-  ratingGridWide: {
-    gap: spacing.md,
-  },
-  ratingButton: {
-    minWidth: 140,
-    minHeight: 56,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: palette.outline,
-    backgroundColor: palette.surfaceContainerLowest,
-  },
-  ratingButtonDark: {
-    backgroundColor: palette.primary,
-    borderColor: palette.primary,
-  },
-  ratingButtonDisabled: {
-    opacity: 0.6,
-  },
-  ratingLabel: {
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 12,
-    lineHeight: 14,
-    letterSpacing: 2.2,
-    textTransform: 'uppercase',
-  },
-  ratingLabelLight: {
-    color: palette.primary,
-  },
-  ratingLabelDark: {
-    color: palette.surfaceContainerLowest,
-  },
-  leftAnchor: {
-    position: 'absolute',
-    left: spacing.xl,
-    bottom: spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  leftAnchorRule: {
-    width: 2,
-    height: 34,
-    backgroundColor: palette.primary,
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-});
+function getGuidanceText({
+  cardPhase,
+  countdownRemaining,
+  isSubmitting,
+}: {
+  cardPhase: StudyCardPhase;
+  countdownRemaining: number | null;
+  isSubmitting: boolean;
+}) {
+  if (isSubmitting) {
+    return 'Kararın bu oturum için kaydediliyor...';
+  }
+
+  if (cardPhase === 'word_only') {
+    return 'Kelimeyi gör, anlamı hatırla ve karta dokun.';
+  }
+
+  if (cardPhase === 'meaning_reveal') {
+    return `${countdownRemaining ?? 0} saniye sonra cümle açılacak.`;
+  }
+
+  return '\u2190 Sonra tekrar    \u2191 Zaten biliyordum    Ezberledim \u2192';
+}
+
+function createStyles(colors: AppPalette) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      backgroundColor: colors.background,
+    },
+    headerRow: {
+      height: 64,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.md,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerButtonDisabled: {
+      opacity: 0.45,
+    },
+    progressLabelWrap: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    progressLabel: {
+      fontFamily: fontFamilies.bodyBold,
+      fontSize: 12,
+      lineHeight: 14,
+      letterSpacing: 2.4,
+      textTransform: 'uppercase',
+      color: colors.primary,
+    },
+    headerPlaceholder: {
+      width: 40,
+      height: 40,
+    },
+    progressTrack: {
+      height: 2,
+      backgroundColor: colors.surfaceContainer,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: colors.primary,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    content: {
+      width: '100%',
+      maxWidth: layout.maxWidth,
+      alignSelf: 'center',
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xl,
+      alignItems: 'center',
+      gap: spacing.lg,
+    },
+    labelBlock: {
+      minHeight: 24,
+      alignItems: 'center',
+    },
+    metaBlock: {
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+      maxWidth: 420,
+    },
+    metaText: {
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    errorText: {
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 14,
+      lineHeight: 20,
+      color: colors.error,
+      textAlign: 'center',
+    },
+    leftAnchor: {
+      position: 'absolute',
+      left: spacing.xl,
+      bottom: spacing.xl,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    leftAnchorRule: {
+      width: 48,
+      height: 1,
+      backgroundColor: colors.primary,
+    },
+    leftAnchorCopy: {
+      gap: spacing.xxs,
+      minWidth: 0,
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+  });
+}

@@ -1,3 +1,6 @@
+import type { SessionPhase } from '@/types/session';
+import type { ThemeMode } from '@/constants/theme';
+
 export type DashboardSnapshot = {
   totalWords: number;
   dueToday: number;
@@ -12,6 +15,7 @@ export type DashboardSnapshot = {
   todayNewCount: number;
   completedToday: number;
   activeSessionId: string | null;
+  activeSessionPhase: SessionPhase | null;
   activeSessionCompletedItems: number;
   activeSessionTotalItems: number;
 };
@@ -31,6 +35,7 @@ export type StudySettings = {
   sessionGoalMinutes: number;
   onboardingCompleted: boolean;
   notificationsEnabled: boolean;
+  themeMode: ThemeMode;
 };
 
 export type SqliteExportValue = string | number | null;
@@ -44,5 +49,6 @@ export type ProgressExportPayload = {
   wordProgress: SqliteExportRow[];
   sessions: SqliteExportRow[];
   sessionItems: SqliteExportRow[];
+  sessionQuizItems: SqliteExportRow[];
   dailyStats: SqliteExportRow[];
 };

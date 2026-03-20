@@ -1,5 +1,5 @@
 export const APP_DB_NAME = 'lexicon.db';
-export const APP_DB_VERSION = 2;
+export const APP_DB_VERSION = 3;
 export const WORDS_SEED_VERSION = 1;
 
 const schemaV1Sql = `
@@ -98,6 +98,25 @@ CREATE INDEX IF NOT EXISTS idx_progress_favorite ON word_progress(is_favorite);
 CREATE INDEX IF NOT EXISTS idx_progress_suspended ON word_progress(is_suspended);
 `;
 
+const schemaV3Sql = `
+CREATE TABLE IF NOT EXISTS session_quiz_items (
+  session_id TEXT NOT NULL,
+  word_id INTEGER NOT NULL,
+  order_index INTEGER NOT NULL,
+  user_answer TEXT,
+  normalized_answer TEXT,
+  is_correct INTEGER,
+  duration_ms INTEGER,
+  answered_at TEXT,
+  PRIMARY KEY (session_id, word_id),
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY (word_id) REFERENCES words(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_quiz_items_session_order
+  ON session_quiz_items(session_id, order_index);
+`;
+
 export const migrationDefinitions = [
   {
     version: 1,
@@ -106,5 +125,9 @@ export const migrationDefinitions = [
   {
     version: 2,
     statements: [schemaV2Sql],
+  },
+  {
+    version: 3,
+    statements: [schemaV3Sql],
   },
 ] as const;

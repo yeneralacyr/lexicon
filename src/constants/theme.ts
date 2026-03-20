@@ -1,6 +1,26 @@
 import type { Theme } from '@react-navigation/native';
 
-export const palette = {
+export type AppPalette = {
+  background: string;
+  surface: string;
+  surfaceContainerLowest: string;
+  surfaceContainerLow: string;
+  surfaceContainer: string;
+  surfaceContainerHigh: string;
+  surfaceContainerHighest: string;
+  border: string;
+  outline: string;
+  ink: string;
+  muted: string;
+  mutedSoft: string;
+  chip: string;
+  primary: string;
+  primaryContainer: string;
+  error: string;
+  errorContainer: string;
+};
+
+export const lightPalette: AppPalette = {
   background: '#F9F9F9',
   surface: '#F9F9F9',
   surfaceContainerLowest: '#FFFFFF',
@@ -18,7 +38,32 @@ export const palette = {
   primaryContainer: '#3B3B3B',
   error: '#BA1A1A',
   errorContainer: '#FFDAD6',
-} as const;
+};
+
+export const darkPalette: AppPalette = {
+  background: '#000000',
+  surface: '#000000',
+  surfaceContainerLowest: '#101010',
+  surfaceContainerLow: '#151515',
+  surfaceContainer: '#1C1C1C',
+  surfaceContainerHigh: '#262626',
+  surfaceContainerHighest: '#303030',
+  border: '#3E3E3E',
+  outline: '#A4A4A4',
+  ink: '#FFFFFF',
+  muted: '#D0D0D0',
+  mutedSoft: '#7A7A7A',
+  chip: '#242424',
+  primary: '#FFFFFF',
+  primaryContainer: '#D9D9D9',
+  error: '#FFB4AB',
+  errorContainer: '#5A1B1B',
+};
+
+export type ResolvedThemeMode = 'light' | 'dark';
+export type ThemeMode = 'system' | ResolvedThemeMode;
+
+export const palette = lightPalette;
 
 export const fontFamilies = {
   displayRegular: 'SpaceGrotesk-Regular',
@@ -54,35 +99,42 @@ export const layout = {
   maxWidth: 960,
   narrowWidth: 620,
   bottomTabHeight: 88,
+  floatingTabBarHeight: 72,
   topBarHeight: 64,
 } as const;
 
-export const appTheme: Theme = {
-  dark: false,
-  colors: {
-    primary: palette.primary,
-    background: palette.background,
-    card: palette.surfaceContainerLowest,
-    text: palette.ink,
-    border: palette.border,
-    notification: palette.primary,
-  },
-  fonts: {
-    regular: {
-      fontFamily: fontFamilies.bodyRegular,
-      fontWeight: '400',
+export function getPalette(mode: ResolvedThemeMode): AppPalette {
+  return mode === 'dark' ? darkPalette : lightPalette;
+}
+
+export function createNavigationTheme(colors: AppPalette, mode: ResolvedThemeMode): Theme {
+  return {
+    dark: mode === 'dark',
+    colors: {
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.surfaceContainerLowest,
+      text: colors.ink,
+      border: colors.border,
+      notification: colors.primary,
     },
-    medium: {
-      fontFamily: fontFamilies.bodyMedium,
-      fontWeight: '500',
+    fonts: {
+      regular: {
+        fontFamily: fontFamilies.bodyRegular,
+        fontWeight: '400',
+      },
+      medium: {
+        fontFamily: fontFamilies.bodyMedium,
+        fontWeight: '500',
+      },
+      bold: {
+        fontFamily: fontFamilies.bodyBold,
+        fontWeight: '700',
+      },
+      heavy: {
+        fontFamily: fontFamilies.displayBold,
+        fontWeight: '700',
+      },
     },
-    bold: {
-      fontFamily: fontFamilies.bodyBold,
-      fontWeight: '700',
-    },
-    heavy: {
-      fontFamily: fontFamilies.displayBold,
-      fontWeight: '700',
-    },
-  },
-};
+  };
+}

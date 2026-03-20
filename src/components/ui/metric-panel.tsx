@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { fontFamilies, palette, spacing } from '@/constants/theme';
+import { fontFamilies, spacing } from '@/constants/theme';
+import { useAppTheme } from '@/theme/app-theme-provider';
 
 type MetricPanelProps = {
   value: string | number;
@@ -11,6 +12,10 @@ type MetricPanelProps = {
 };
 
 export function MetricPanel({ icon, label, tone = 'low', value }: MetricPanelProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const toneStyles = useMemo(() => createToneStyles(colors), [colors]);
+
   return (
     <View style={[styles.panel, toneStyles[tone]]}>
       {icon}
@@ -22,36 +27,40 @@ export function MetricPanel({ icon, label, tone = 'low', value }: MetricPanelPro
   );
 }
 
-const styles = StyleSheet.create({
-  panel: {
-    minHeight: 140,
-    padding: spacing.lg,
-    justifyContent: 'space-between',
-  },
-  value: {
-    fontFamily: fontFamilies.displayBold,
-    fontSize: 34,
-    color: palette.ink,
-  },
-  label: {
-    marginTop: spacing.xs,
-    fontFamily: fontFamilies.bodyBold,
-    fontSize: 11,
-    lineHeight: 14,
-    letterSpacing: 1.8,
-    textTransform: 'uppercase',
-    color: palette.muted,
-  },
-});
+function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
+  return StyleSheet.create({
+    panel: {
+      minHeight: 140,
+      padding: spacing.lg,
+      justifyContent: 'space-between',
+    },
+    value: {
+      fontFamily: fontFamilies.displayBold,
+      fontSize: 34,
+      color: colors.ink,
+    },
+    label: {
+      marginTop: spacing.xs,
+      fontFamily: fontFamilies.bodyBold,
+      fontSize: 11,
+      lineHeight: 14,
+      letterSpacing: 1.8,
+      textTransform: 'uppercase',
+      color: colors.muted,
+    },
+  });
+}
 
-const toneStyles = StyleSheet.create({
-  low: {
-    backgroundColor: palette.surfaceContainerLow,
-  },
-  default: {
-    backgroundColor: palette.surfaceContainer,
-  },
-  high: {
-    backgroundColor: palette.surfaceContainerHigh,
-  },
-});
+function createToneStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
+  return StyleSheet.create({
+    low: {
+      backgroundColor: colors.surfaceContainerLow,
+    },
+    default: {
+      backgroundColor: colors.surfaceContainer,
+    },
+    high: {
+      backgroundColor: colors.surfaceContainerHigh,
+    },
+  });
+}

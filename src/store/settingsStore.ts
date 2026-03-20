@@ -12,5 +12,6 @@ export const useSettingsStore = create<SettingsState>((set) => ({
   sessionGoalMinutes: 5,
   onboardingCompleted: false,
   notificationsEnabled: false,
+  themeMode: 'system',
   hydrate: (settings) => set(settings),
 }));

@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import dayjs from 'dayjs';
 
+import type { ThemeMode } from '@/constants/theme';
 import type { AppOverview, DashboardSnapshot, StudySettings } from '@/types/db';
 import { todayIso } from '@/utils/dates';
 
@@ -10,6 +11,7 @@ const defaultSettings = {
   sessionGoalMinutes: 5,
   onboardingCompleted: false,
   notificationsEnabled: false,
+  themeMode: 'system',
 } satisfies StudySettings;
 
 export async function upsertSetting(db: SQLiteDatabase, key: string, value: string) {
@@ -43,6 +45,9 @@ export async function ensureDefaultSettings(db: SQLiteDatabase) {
   if (!presentKeys.has('notifications_enabled')) {
     await upsertSetting(db, 'notifications_enabled', String(Number(defaultSettings.notificationsEnabled)));
   }
+  if (!presentKeys.has('theme_mode')) {
+    await upsertSetting(db, 'theme_mode', defaultSettings.themeMode);
+  }
 }
 
 export async function getStudySettings(db: SQLiteDatabase): Promise<StudySettings> {
@@ -57,6 +62,7 @@ export async function getStudySettings(db: SQLiteDatabase): Promise<StudySetting
     notificationsEnabled: Boolean(
       Number(map.get('notifications_enabled') ?? Number(defaultSettings.notificationsEnabled))
     ),
+    themeMode: (map.get('theme_mode') ?? defaultSettings.themeMode) as ThemeMode,
   };
 }
 
@@ -78,6 +84,9 @@ export async function updateStudySettingsQuery(
   }
   if (updates.notificationsEnabled !== undefined) {
     await upsertSetting(db, 'notifications_enabled', String(Number(updates.notificationsEnabled)));
+  }
+  if (updates.themeMode !== undefined) {
+    await upsertSetting(db, 'theme_mode', updates.themeMode);
   }
 
   return getStudySettings(db);
@@ -177,14 +186,33 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
   );
   const activeSession = await db.getFirstAsync<{
     id: string;
-    completed_items: number;
-    total_items: number;
+    status: string;
+    phase_completed_items: number;
+    phase_total_items: number;
   }>(
     `
-      SELECT id, completed_items, total_items
-      FROM sessions
-      WHERE status = 'active'
-        AND completed_items < total_items
+      SELECT
+        s.id,
+        s.status,
+        CASE
+          WHEN s.status = 'quiz' THEN (
+            SELECT COUNT(*)
+            FROM session_quiz_items qi
+            WHERE qi.session_id = s.id
+              AND qi.answered_at IS NOT NULL
+          )
+          ELSE s.completed_items
+        END as phase_completed_items,
+        CASE
+          WHEN s.status = 'quiz' THEN (
+            SELECT COUNT(*)
+            FROM session_quiz_items qi
+            WHERE qi.session_id = s.id
+          )
+          ELSE s.total_items
+        END as phase_total_items
+      FROM sessions s
+      WHERE s.status IN ('active', 'quiz')
       ORDER BY started_at DESC
       LIMIT 1
     `
@@ -194,7 +222,7 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
   const newWordCount = newWords?.count ?? 0;
   const streakDays = await getStreakDays(db);
   const recommendedCount = activeSession
-    ? activeSession.total_items
+    ? activeSession.phase_total_items
     : dueCount + Math.min(settings.dailyNewLimit, newWordCount);
   const todayReviewedCount = todayStats?.reviewed_count ?? 0;
   const todayNewCount = todayStats?.new_count ?? 0;
@@ -213,8 +241,9 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
     todayNewCount,
     completedToday: todayReviewedCount + todayNewCount,
     activeSessionId: activeSession?.id ?? null,
-    activeSessionCompletedItems: activeSession?.completed_items ?? 0,
-    activeSessionTotalItems: activeSession?.total_items ?? 0,
+    activeSessionPhase: activeSession ? (activeSession.status === 'quiz' ? 'quiz' : 'study') : null,
+    activeSessionCompletedItems: activeSession?.phase_completed_items ?? 0,
+    activeSessionTotalItems: activeSession?.phase_total_items ?? 0,
   };
 }
 
@@ -236,8 +265,7 @@ export async function getAppOverviewQuery(db: SQLiteDatabase): Promise<AppOvervi
     `
       SELECT id
       FROM sessions
-      WHERE status = 'active'
-        AND completed_items < total_items
+      WHERE status IN ('active', 'quiz')
       ORDER BY started_at DESC
       LIMIT 1
     `

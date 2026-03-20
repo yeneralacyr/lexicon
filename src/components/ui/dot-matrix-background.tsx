@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { palette } from '@/constants/theme';
+import { useAppTheme } from '@/theme/app-theme-provider';
 
 type DotMatrixBackgroundProps = {
   opacity?: number;
@@ -13,6 +13,8 @@ export function DotMatrixBackground({
   opacity = 0.12,
 }: DotMatrixBackgroundProps) {
   const { height, width } = useWindowDimensions();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors.border), [colors.border]);
   const columns = Math.ceil(width / gap) + 1;
   const rows = Math.ceil(height / gap) + 1;
 
@@ -37,21 +39,23 @@ export function DotMatrixBackground({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  row: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 2,
-  },
-  dot: {
-    position: 'absolute',
-    width: 2,
-    height: 2,
-    borderRadius: 2,
-    backgroundColor: palette.border,
-  },
-});
+function createStyles(borderColor: string) {
+  return StyleSheet.create({
+    container: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    row: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      height: 2,
+    },
+    dot: {
+      position: 'absolute',
+      width: 2,
+      height: 2,
+      borderRadius: 2,
+      backgroundColor: borderColor,
+    },
+  });
+}

@@ -10,11 +10,14 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { appTheme, palette, spacing } from '@/constants/theme';
+import { lightPalette, spacing, type ThemeMode } from '@/constants/theme';
 import { initializeDatabase } from '@/db';
+import { getSettings } from '@/modules/progress/progress.service';
+import { AppThemeProvider, useAppTheme } from '@/theme/app-theme-provider';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -31,16 +34,23 @@ export default function RootLayout() {
   });
   const [dbReady, setDbReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+  const styles = useMemo(() => createStyles(lightPalette), []);
 
   useEffect(() => {
     let active = true;
 
     async function bootstrap() {
       try {
-        await SystemUI.setBackgroundColorAsync(palette.background);
+        await SystemUI.setBackgroundColorAsync(lightPalette.background);
 
         if (!isWeb) {
           await initializeDatabase();
+          const settings = await getSettings();
+
+          if (active) {
+            setThemeMode(settings.themeMode);
+          }
         }
 
         if (active) {
@@ -48,7 +58,7 @@ export default function RootLayout() {
         }
       } catch (error) {
         if (active) {
-          setError(error instanceof Error ? error.message : 'Unexpected bootstrap error');
+          setError(error instanceof Error ? error.message : 'Beklenmeyen bir hata oluştu');
         }
       }
     }
@@ -72,8 +82,8 @@ export default function RootLayout() {
     return (
       <View style={styles.errorScreen}>
         <StatusBar style="dark" />
-        <Text style={styles.errorEyebrow}>BOOTSTRAP ERROR</Text>
-        <Text style={styles.errorTitle}>Database setup failed.</Text>
+        <Text style={styles.errorEyebrow}>BAŞLATMA HATASI</Text>
+        <Text style={styles.errorTitle}>Veritabanı kurulumu başarısız.</Text>
         <Text style={styles.errorText}>{error ?? fontsError?.message}</Text>
       </View>
     );
@@ -87,53 +97,74 @@ export default function RootLayout() {
     return (
       <View style={styles.errorScreen}>
         <StatusBar style="dark" />
-        <Text style={styles.errorEyebrow}>NATIVE ONLY BUILD</Text>
-        <Text style={styles.errorTitle}>Persistent storage requires iOS or Android.</Text>
+        <Text style={styles.errorEyebrow}>SADECE YEREL DERLEME</Text>
+        <Text style={styles.errorTitle}>Kalıcı depolama iOS veya Android gerektirir.</Text>
         <Text style={styles.errorText}>
-          Lexicon uses native SQLite, local exports, and share flows. Web preview is intentionally disabled
-          for production parity.
+          Lexicon yerel SQLite, yerel dışa aktarımlar ve paylaşım akışları kullanır. Üretime uygunluk için web önizlemesi bilerek devre dışı bırakılmıştır.
         </Text>
       </View>
     );
   }
 
   return (
-    <ThemeProvider value={appTheme}>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.background } }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="onboarding/index" />
-        <Stack.Screen name="settings" />
-        <Stack.Screen name="session/[sessionId]" />
-        <Stack.Screen name="session/complete" />
-        <Stack.Screen name="word/[wordId]" />
+    <GestureHandlerRootView style={styles.root}>
+      <AppThemeProvider initialThemeMode={themeMode}>
+        <RootNavigator />
+      </AppThemeProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function RootNavigator() {
+  const { colors, isDark, navigationTheme } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.background);
+  }, [colors.background]);
+
+  return (
+    <ThemeProvider value={navigationTheme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding/index" />
+          <Stack.Screen name="session/[sessionId]" />
+          <Stack.Screen name="session/quiz/[sessionId]" />
+          <Stack.Screen name="session/complete" />
+          <Stack.Screen name="word/[wordId]" />
       </Stack>
     </ThemeProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  errorScreen: {
-    flex: 1,
-    backgroundColor: palette.background,
-    paddingHorizontal: spacing.xl,
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  errorEyebrow: {
-    color: palette.muted,
-    letterSpacing: 1.6,
-    fontSize: 12,
-  },
-  errorTitle: {
-    color: palette.ink,
-    fontSize: 28,
-    fontWeight: '700',
-  },
-  errorText: {
-    color: palette.muted,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-});
+function createStyles(colors: typeof lightPalette) {
+  return StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    errorScreen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.xl,
+      justifyContent: 'center',
+      gap: spacing.md,
+    },
+    errorEyebrow: {
+      color: colors.muted,
+      letterSpacing: 1.6,
+      fontSize: 12,
+    },
+    errorTitle: {
+      color: colors.ink,
+      fontSize: 28,
+      fontWeight: '700',
+    },
+    errorText: {
+      color: colors.muted,
+      fontSize: 16,
+      lineHeight: 24,
+    },
+  });
+}

@@ -1,3 +1,18 @@
+/**
+ * AdMob Runtime Configuration
+ *
+ * Required EAS secrets for production builds:
+ *   ADMOB_ANDROID_APP_ID        — Android AdMob app ID (ca-app-pub-xxx)
+ *   ADMOB_IOS_APP_ID            — iOS AdMob app ID (ca-app-pub-xxx)
+ *   ADMOB_REWARDED_EXTRA_NEW_WORDS_ANDROID — Rewarded ad unit ID for Android
+ *   ADMOB_REWARDED_EXTRA_NEW_WORDS_IOS     — Rewarded ad unit ID for iOS
+ *
+ * Optional:
+ *   ADMOB_TEST_DEVICE_IDS       — Comma-separated test device IDs
+ *
+ * These are read by app.config.ts and injected into `extra.admob`.
+ * Verify with: `eas secret:list` before submitting a production build.
+ */
 import Constants from 'expo-constants';
 import { NativeModules, Platform, TurboModuleRegistry } from 'react-native';
 

@@ -8,6 +8,8 @@ import type {
   SessionDetail,
   SessionPhase,
   SessionQuizDetail,
+  SessionSourceType,
+  SessionStatus,
   SessionSummary,
   SessionType,
 } from '@/types/session';
@@ -25,6 +27,7 @@ type CreateSessionItemInput = {
   sessionId: string;
   wordId: number;
   orderIndex: number;
+  sourceType: SessionSourceType;
   promptType: PromptType;
   selectedSentenceIndex: number | null;
 };
@@ -52,6 +55,20 @@ function orderedSentences(
 
 function resolveSessionPhase(status: string): SessionPhase {
   return status === 'quiz' ? 'quiz' : 'study';
+}
+
+type ActiveSessionScope = 'all' | 'study' | 'library_review';
+
+function getActiveSessionScopeClause(scope: ActiveSessionScope) {
+  if (scope === 'library_review') {
+    return "status = 'active' AND session_type = 'library_review' AND total_items <= 20";
+  }
+
+  if (scope === 'study') {
+    return "status IN ('active', 'quiz') AND session_type != 'library_review'";
+  }
+
+  return "status IN ('active', 'quiz')";
 }
 
 export async function createSessionOnDatabase(
@@ -96,14 +113,16 @@ export async function createSessionItemsOnDatabase(
           session_id,
           word_id,
           order_index,
+          source_type,
           prompt_type,
           selected_sentence_index
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
       `,
       item.sessionId,
       item.wordId,
       item.orderIndex,
+      item.sourceType,
       item.promptType,
       item.selectedSentenceIndex
     );
@@ -115,17 +134,10 @@ export async function createSessionItemsRepository(items: CreateSessionItemInput
   await createSessionItemsOnDatabase(db, items);
 }
 
-type ActiveSessionScope = 'all' | 'study' | 'library_review';
-
-async function getActiveSessionByScope(scope: ActiveSessionScope): Promise<ActiveSession | null> {
-  const db = await getDatabase();
-  const [whereClause, params] =
-    scope === 'library_review'
-      ? ["status = 'active' AND session_type = 'library_review'", [] as (string | number)[]]
-      : scope === 'study'
-        ? ["status IN ('active', 'quiz') AND session_type != 'library_review'", [] as (string | number)[]]
-        : ["status IN ('active', 'quiz')", [] as (string | number)[]];
-
+export async function getActiveSessionByScopeOnDatabase(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  scope: ActiveSessionScope
+): Promise<ActiveSession | null> {
   const session = await db.getFirstAsync<{
     id: string;
     status: string;
@@ -147,11 +159,10 @@ async function getActiveSessionByScope(scope: ActiveSessionScope): Promise<Activ
         new_items,
         review_items
       FROM sessions
-      WHERE ${whereClause}
+      WHERE ${getActiveSessionScopeClause(scope)}
       ORDER BY started_at DESC
       LIMIT 1
-    `,
-    ...params
+    `
   );
 
   if (!session) {
@@ -168,6 +179,11 @@ async function getActiveSessionByScope(scope: ActiveSessionScope): Promise<Activ
     newItems: session.new_items,
     reviewItems: session.review_items,
   };
+}
+
+async function getActiveSessionByScope(scope: ActiveSessionScope): Promise<ActiveSession | null> {
+  const db = await getDatabase();
+  return getActiveSessionByScopeOnDatabase(db, scope);
 }
 
 export async function getActiveSessionRepository(): Promise<ActiveSession | null> {
@@ -239,6 +255,7 @@ export async function getSessionDetailRepository(sessionId: string): Promise<Ses
     sentence5: string | null;
     selected_sentence_index: number | null;
     order_index: number;
+    source_type: SessionSourceType;
     prompt_type: PromptType;
     result_rating: Rating | null;
     duration_ms: number | null;
@@ -263,6 +280,7 @@ export async function getSessionDetailRepository(sessionId: string): Promise<Ses
         w.sentence5,
         si.selected_sentence_index,
         si.order_index,
+        si.source_type,
         si.prompt_type,
         si.result_rating,
         si.duration_ms
@@ -276,7 +294,7 @@ export async function getSessionDetailRepository(sessionId: string): Promise<Ses
 
   return {
     id: session.id,
-    status: session.status,
+    status: session.status as SessionStatus,
     phase: resolveSessionPhase(session.status),
     sessionType: session.session_type as SessionType,
     startedAt: session.started_at,
@@ -294,6 +312,7 @@ export async function getSessionDetailRepository(sessionId: string): Promise<Ses
       sentences: orderedSentences(item, item.sentence),
       selectedSentenceIndex: item.selected_sentence_index ?? null,
       orderIndex: item.order_index,
+      sourceType: item.source_type,
       promptType: item.prompt_type,
       resultRating: item.result_rating,
       durationMs: item.duration_ms ?? null,
@@ -309,11 +328,12 @@ export async function getSessionItemContextOnDatabase(
     id: number;
     session_id: string;
     word_id: number;
+    source_type: SessionSourceType;
     result_rating: Rating | null;
     selected_sentence_index: number | null;
   }>(
     `
-      SELECT id, session_id, word_id, result_rating, selected_sentence_index
+      SELECT id, session_id, word_id, source_type, result_rating, selected_sentence_index
       FROM session_items
       WHERE id = ?
     `,
@@ -387,7 +407,7 @@ export async function getSessionCompletedItemsOnDatabase(
 export async function setSessionStatusOnDatabase(
   db: Awaited<ReturnType<typeof getDatabase>>,
   sessionId: string,
-  status: 'active' | 'quiz' | 'completed'
+  status: SessionStatus
 ) {
   await db.runAsync(
     `
@@ -406,9 +426,10 @@ export async function queueSessionReplayOnDatabase(
     sessionId: string;
     wordId: number;
     afterOrderIndex: number;
+    sourceType: SessionSourceType;
     selectedSentenceIndex: number | null;
   }
-) {
+): Promise<false | { insertAt: number; insertedId: number }> {
   const existingReplay = await db.getFirstAsync<{ count: number }>(
     `
       SELECT COUNT(*) as count
@@ -441,20 +462,22 @@ export async function queueSessionReplayOnDatabase(
     insertAt
   );
 
-  await db.runAsync(
+  const insertResult = await db.runAsync(
     `
       INSERT INTO session_items (
         session_id,
         word_id,
         order_index,
+        source_type,
         prompt_type,
         selected_sentence_index
       )
-      VALUES (?, ?, ?, 'recall', ?)
+      VALUES (?, ?, ?, ?, 'recall', ?)
     `,
     input.sessionId,
     input.wordId,
     insertAt,
+    input.sourceType,
     input.selectedSentenceIndex
   );
 
@@ -467,7 +490,10 @@ export async function queueSessionReplayOnDatabase(
     input.sessionId
   );
 
-  return true;
+  return {
+    insertAt,
+    insertedId: Number(insertResult.lastInsertRowId),
+  };
 }
 
 export async function beginSessionQuizOnDatabase(
@@ -578,7 +604,7 @@ export async function getSessionQuizDetailRepository(sessionId: string): Promise
   return {
     id: session.id,
     phase: 'quiz',
-    status: session.status,
+    status: session.status as SessionStatus,
     totalItems: items.length,
     answeredItems: items.filter((item) => item.answered_at).length,
     items: items.map((item) => ({
@@ -608,7 +634,7 @@ export async function saveSessionQuizAnswerOnDatabase(
     durationMs: number;
   }
 ) {
-  await db.runAsync(
+  const result = await db.runAsync(
     `
       UPDATE session_quiz_items
       SET user_answer = ?,
@@ -618,6 +644,7 @@ export async function saveSessionQuizAnswerOnDatabase(
           answered_at = ?
       WHERE session_id = ?
         AND word_id = ?
+        AND answered_at IS NULL
     `,
     input.userAnswer,
     input.normalizedAnswer,
@@ -627,6 +654,8 @@ export async function saveSessionQuizAnswerOnDatabase(
     input.sessionId,
     input.wordId
   );
+
+  return (result.changes ?? 0) > 0;
 }
 
 export async function getSessionStudyRatingsOnDatabase(
@@ -751,7 +780,7 @@ export async function getSessionSummaryRepository(sessionId: string): Promise<Se
 
   return {
     id: session.id,
-    status: session.status,
+    status: session.status as SessionStatus,
     totalItems: session.total_items,
     completedItems: session.completed_items,
     uniqueWords: uniqueWords?.count ?? 0,

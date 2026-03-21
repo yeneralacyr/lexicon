@@ -1,4 +1,5 @@
 import type { AdsConsentInfo, RewardedAd } from 'react-native-google-mobile-ads';
+import { AppState } from 'react-native';
 
 import { admobConfig, getPlacementUnitId } from '@/ads/config';
 import type { AdsPrivacyState } from '@/ads/types';
@@ -21,6 +22,9 @@ let rewardedAd: RewardedAd | null = null;
 let rewardedLoaded = false;
 let rewardedLoading = false;
 let mobileAdsModulePromise: Promise<typeof import('react-native-google-mobile-ads')> | null = null;
+let rewardedRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+let rewardedLifecycleUnsubscribers: (() => void)[] = [];
+let appStateSubscription: { remove: () => void } | null = null;
 
 const listeners = new Set<(status: AdsPrivacyState) => void>();
 
@@ -44,6 +48,29 @@ async function getMobileAdsModule() {
   }
 
   return mobileAdsModulePromise;
+}
+
+function clearRewardedRetryTimeout() {
+  if (rewardedRetryTimeout) {
+    clearTimeout(rewardedRetryTimeout);
+    rewardedRetryTimeout = null;
+  }
+}
+
+function cleanupRewardedLifecycleListeners() {
+  for (const unsubscribe of rewardedLifecycleUnsubscribers) {
+    unsubscribe();
+  }
+
+  rewardedLifecycleUnsubscribers = [];
+}
+
+function scheduleRewardedPrimeRetry() {
+  clearRewardedRetryTimeout();
+  rewardedRetryTimeout = setTimeout(() => {
+    rewardedRetryTimeout = null;
+    void primeExtraNewWordsRewardedAd();
+  }, 1500);
 }
 
 async function mapConsentStatus(status: string): Promise<AdsPrivacyState['consentStatus']> {
@@ -70,30 +97,33 @@ function createRewardedRequestOptions() {
 
 async function attachRewardedListeners(ad: RewardedAd) {
   const { AdEventType, RewardedAdEventType } = await getMobileAdsModule();
+  cleanupRewardedLifecycleListeners();
+  clearRewardedRetryTimeout();
 
-  ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-    rewardedLoaded = true;
-    rewardedLoading = false;
-  });
-
-  ad.addAdEventListener(AdEventType.ERROR, (error) => {
-    rewardedLoaded = false;
-    rewardedLoading = false;
-    rewardedAd = null;
-    setPrivacyState({
-      lastError: error?.message ?? 'Ödüllü reklam yüklenemedi.',
-    });
-    setTimeout(() => {
+  rewardedLifecycleUnsubscribers = [
+    ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      rewardedLoaded = true;
+      rewardedLoading = false;
+      setPrivacyState({ lastError: null });
+    }),
+    ad.addAdEventListener(AdEventType.ERROR, (error) => {
+      rewardedLoaded = false;
+      rewardedLoading = false;
+      rewardedAd = null;
+      cleanupRewardedLifecycleListeners();
+      setPrivacyState({
+        lastError: error?.message ?? 'Ödüllü reklam yüklenemedi.',
+      });
+      scheduleRewardedPrimeRetry();
+    }),
+    ad.addAdEventListener(AdEventType.CLOSED, () => {
+      rewardedLoaded = false;
+      rewardedLoading = false;
+      rewardedAd = null;
+      cleanupRewardedLifecycleListeners();
       void primeExtraNewWordsRewardedAd();
-    }, 1500);
-  });
-
-  ad.addAdEventListener(AdEventType.CLOSED, () => {
-    rewardedLoaded = false;
-    rewardedLoading = false;
-    rewardedAd = null;
-    void primeExtraNewWordsRewardedAd();
-  });
+    }),
+  ];
 }
 
 async function ensureMobileAdsInitialized() {
@@ -195,6 +225,23 @@ export async function bootstrapAds() {
   return bootstrapPromise;
 }
 
+export function setupAdsLifecycle() {
+  if (appStateSubscription || !admobConfig.isNativeSupported) {
+    return () => undefined;
+  }
+
+  appStateSubscription = AppState.addEventListener('change', (nextState) => {
+    if (nextState === 'active') {
+      bootstrapPromise = null;
+    }
+  });
+
+  return () => {
+    appStateSubscription?.remove();
+    appStateSubscription = null;
+  };
+}
+
 export function getAdsPrivacyStatus() {
   return adsPrivacyState;
 }
@@ -214,6 +261,7 @@ export async function openAdsPrivacyOptions() {
   }
 
   try {
+    await bootstrapAds();
     const mobileAdsModule = await getMobileAdsModule();
     const consentInfo = await mobileAdsModule.AdsConsent.showPrivacyOptionsForm();
     await syncConsentState(consentInfo);
@@ -236,7 +284,13 @@ export async function openAdsPrivacyOptions() {
 }
 
 export async function maybeShowExtraNewWordsRewardedAd(amount = 5) {
-  if (!admobConfig.isNativeSupported || !adsPrivacyState.canRequestAds) {
+  if (!admobConfig.isNativeSupported) {
+    return false;
+  }
+
+  await bootstrapAds();
+
+  if (!adsPrivacyState.canRequestAds) {
     return false;
   }
 
@@ -252,8 +306,15 @@ export async function maybeShowExtraNewWordsRewardedAd(amount = 5) {
     let settled = false;
     let rewardGranted = false;
     let rewardPromise: Promise<void> | null = null;
+    const failsafeTimeout = setTimeout(() => {
+      setPrivacyState({
+        lastError: 'Odullu reklam zaman asimina ugradi.',
+      });
+      finish(false);
+    }, 45000);
 
     const cleanup = () => {
+      clearTimeout(failsafeTimeout);
       unsubscribeClosed();
       unsubscribeError();
       unsubscribeRewarded();

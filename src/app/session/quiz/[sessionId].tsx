@@ -1,9 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
@@ -31,10 +33,52 @@ export default function SessionQuizScreen() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [answerStartedAt, setAnswerStartedAt] = useState(() => Date.now());
   const isFinalizingRef = useRef(false);
+  const submitLockRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const feedbackDelayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const feedbackDelayResolveRef = useRef<((completed: boolean) => void) | null>(null);
   const currentItem = quiz?.items[currentIndex] ?? null;
   const currentWordId = currentItem?.wordId ?? null;
+
+  const isBusy = isSubmitting || Boolean(feedback);
+
+  const cancelFeedbackDelay = useCallback(() => {
+    if (feedbackDelayTimeoutRef.current) {
+      clearTimeout(feedbackDelayTimeoutRef.current);
+      feedbackDelayTimeoutRef.current = null;
+    }
+
+    if (feedbackDelayResolveRef.current) {
+      feedbackDelayResolveRef.current(false);
+      feedbackDelayResolveRef.current = null;
+    }
+  }, []);
+
+  const waitForFeedbackDelay = useCallback((ms: number) => {
+    cancelFeedbackDelay();
+
+    return new Promise<boolean>((resolve) => {
+      feedbackDelayResolveRef.current = resolve;
+      feedbackDelayTimeoutRef.current = setTimeout(() => {
+        feedbackDelayTimeoutRef.current = null;
+        feedbackDelayResolveRef.current = null;
+        resolve(true);
+      }, ms);
+    });
+  }, [cancelFeedbackDelay]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      submitLockRef.current = false;
+      cancelFeedbackDelay();
+    };
+  }, [cancelFeedbackDelay]);
 
   useEffect(() => {
     let active = true;
@@ -45,27 +89,39 @@ export default function SessionQuizScreen() {
         return;
       }
 
-      const nextQuiz = await getSessionQuizSnapshot(sessionId);
+      try {
+        const nextQuiz = await getSessionQuizSnapshot(sessionId);
 
-      if (!nextQuiz) {
-        router.replace('/today');
-        return;
-      }
+        if (!nextQuiz) {
+          router.replace('/today');
+          return;
+        }
 
-      if (nextQuiz.status === 'completed') {
-        router.replace(`/session/complete?sessionId=${sessionId}`);
-        return;
-      }
+        if (nextQuiz.status === 'completed') {
+          router.replace(`/session/complete?sessionId=${sessionId}`);
+          return;
+        }
 
-      if (nextQuiz.status !== 'quiz') {
-        router.replace(`/session/${sessionId}`);
-        return;
-      }
+        if (nextQuiz.status === 'cancelled') {
+          router.replace('/today');
+          return;
+        }
 
-      if (active) {
-        setQuiz(nextQuiz);
-        setCurrentIndex(resolveNextUnansweredIndex(nextQuiz));
-        setActiveSessionId(sessionId);
+        if (nextQuiz.status !== 'quiz') {
+          router.replace(`/session/${sessionId}`);
+          return;
+        }
+
+        if (active) {
+          setQuiz(nextQuiz);
+          setCurrentIndex(resolveNextUnansweredIndex(nextQuiz));
+          setActiveSessionId(sessionId);
+          setLoadError(null);
+        }
+      } catch (loadFailure) {
+        if (active) {
+          setLoadError(loadFailure instanceof Error ? loadFailure.message : 'Quiz yüklenemedi.');
+        }
       }
     }
 
@@ -86,6 +142,17 @@ export default function SessionQuizScreen() {
     setError(null);
     setAnswerStartedAt(Date.now());
   }, [currentIndex, currentWordId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => isBusy);
+
+      return () => {
+        subscription.remove();
+      };
+    }, [isBusy])
+  );
+
   const progressValue = quiz ? `${Math.min(currentIndex + 1, quiz.totalItems)} / ${quiz.totalItems}` : '0 / 0';
   const progressWidth = quiz && quiz.totalItems > 0 ? ((currentIndex + 1) / quiz.totalItems) * 100 : 0;
 
@@ -100,12 +167,16 @@ export default function SessionQuizScreen() {
       throw new Error('Quiz yüklenemedi.');
     }
 
+    if (nextQuiz.status === 'cancelled') {
+      throw new Error('Bu oturum artık aktif değil.');
+    }
+
     setQuiz(nextQuiz);
     return nextQuiz;
   }
 
   const handleFinalize = useCallback(async () => {
-    if (!sessionId || isFinalizingRef.current) {
+    if (!sessionId || isFinalizingRef.current || !isMountedRef.current) {
       return;
     }
 
@@ -113,6 +184,9 @@ export default function SessionQuizScreen() {
 
     try {
       await finalizeQuizSession(sessionId);
+      if (!isMountedRef.current) {
+        return;
+      }
       setActiveSessionId(null);
       router.replace(`/session/complete?sessionId=${sessionId}`);
     } finally {
@@ -131,10 +205,11 @@ export default function SessionQuizScreen() {
   }, [handleFinalize, quiz]);
 
   async function handleSubmit(selectedOption: string) {
-    if (!sessionId || !currentItem || isSubmitting || feedback) {
+    if (!sessionId || !currentItem || submitLockRef.current || isSubmitting || feedback) {
       return;
     }
 
+    submitLockRef.current = true;
     setIsSubmitting(true);
     setPendingSelection(selectedOption);
     setError(null);
@@ -148,16 +223,38 @@ export default function SessionQuizScreen() {
         durationMs: Math.max(0, Date.now() - answerStartedAt),
       });
 
+      if (!result) {
+        const nextQuiz = await reloadQuiz();
+
+        if (!nextQuiz || !isMountedRef.current) {
+          return;
+        }
+
+        const nextIndex = resolveNextUnansweredIndex(nextQuiz);
+
+        if (nextIndex === -1) {
+          await handleFinalize();
+          return;
+        }
+
+        setCurrentIndex(nextIndex);
+        return;
+      }
+
       setFeedback({
         isCorrect: result.isCorrect,
         selectedOption,
       });
 
-      await delay(1500);
+      const completedDelay = await waitForFeedbackDelay(1500);
+
+      if (!completedDelay || !isMountedRef.current) {
+        return;
+      }
 
       const nextQuiz = await reloadQuiz();
 
-      if (!nextQuiz) {
+      if (!nextQuiz || !isMountedRef.current) {
         return;
       }
 
@@ -170,23 +267,65 @@ export default function SessionQuizScreen() {
 
       setCurrentIndex(nextIndex);
     } catch (submissionError) {
+      if (!isMountedRef.current) {
+        return;
+      }
       setPendingSelection(null);
       setError(submissionError instanceof Error ? submissionError.message : 'Yanıt kaydedilemedi.');
     } finally {
-      setIsSubmitting(false);
+      submitLockRef.current = false;
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
   }
 
   async function handleClose() {
+    if (isBusy) {
+      return;
+    }
+
+    cancelFeedbackDelay();
     setActiveSessionId(null);
     router.replace('/today');
+  }
+
+  if (!quiz) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <DotMatrixBackground opacity={0.04} />
+          <View style={styles.loadingState}>
+            <TechnicalLabel>{loadError ? 'Quiz yüklenemedi' : 'Quiz hazırlanıyor'}</TechnicalLabel>
+            {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
+            {loadError ? (
+              <ActionButton
+                label="Tekrar dene"
+                onPress={() => {
+                  setLoadError(null);
+                  if (sessionId) {
+                    router.replace(`/session/quiz/${sessionId}`);
+                  } else {
+                    router.replace('/today');
+                  }
+                }}
+                style={styles.retryButton}
+              />
+            ) : null}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => void handleClose()} style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}>
+          <Pressable
+            disabled={isBusy}
+            onPress={() => void handleClose()}
+            style={({ pressed }) => [styles.headerButton, (pressed || isBusy) && styles.pressed]}>
             <MaterialIcons color={colors.primary} name="close" size={24} />
           </Pressable>
 
@@ -225,7 +364,7 @@ export default function SessionQuizScreen() {
 
                 return (
                   <Pressable
-                    disabled={isSubmitting || Boolean(feedback)}
+                    disabled={isBusy}
                     key={option}
                     onPress={() => {
                       void handleSubmit(option);
@@ -236,7 +375,7 @@ export default function SessionQuizScreen() {
                       showPending && styles.optionButtonPending,
                       showCorrect && styles.optionButtonCorrect,
                       showWrong && styles.optionButtonWrong,
-                      pressed && !feedback && !pendingSelection && styles.optionPressed,
+                      pressed && !feedback && !pendingSelection && !isSubmitting && styles.optionPressed,
                     ]}>
                     <View style={styles.optionInner}>
                       <Text
@@ -275,12 +414,6 @@ export default function SessionQuizScreen() {
 
 function resolveNextUnansweredIndex(quiz: SessionQuizDetail) {
   return quiz.items.findIndex((item) => !item.answeredAt);
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }
 
 function createStyles(colors: AppPalette) {
@@ -334,6 +467,18 @@ function createStyles(colors: AppPalette) {
       flex: 1,
       backgroundColor: colors.background,
       justifyContent: 'center',
+    },
+    loadingState: {
+      width: '100%',
+      maxWidth: layout.maxWidth,
+      alignSelf: 'center',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    retryButton: {
+      width: '100%',
+      maxWidth: 280,
     },
     content: {
       width: '100%',
@@ -393,8 +538,8 @@ function createStyles(colors: AppPalette) {
       backgroundColor: colors.primary,
     },
     optionButtonWrong: {
-      borderColor: '#C84C4C',
-      backgroundColor: '#C84C4C',
+      borderColor: colors.error,
+      backgroundColor: colors.error,
     },
     optionInner: {
       alignItems: 'center',
@@ -424,7 +569,7 @@ function createStyles(colors: AppPalette) {
       fontFamily: fontFamilies.bodyMedium,
       fontSize: 14,
       lineHeight: 20,
-      color: '#C84C4C',
+      color: colors.error,
       textAlign: 'center',
     },
     optionPressed: {

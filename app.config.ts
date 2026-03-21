@@ -19,6 +19,13 @@ const testDeviceIds = (process.env.ADMOB_TEST_DEVICE_IDS ?? '')
 const hasNativeAppIds = Boolean(androidAppId && iosAppId);
 const hasRewardedUnits = Boolean(rewardedExtraNewWordsAndroid && rewardedExtraNewWordsIos);
 const isAdMobEnabled = IS_PRODUCTION ? hasNativeAppIds && hasRewardedUnits : hasNativeAppIds;
+const PRIVACY_POLICY_URL = process.env.PRIVACY_POLICY_URL ?? 'https://lexicon.forvibe.app/privacy-policy';
+
+if (IS_PRODUCTION && (!hasNativeAppIds || !hasRewardedUnits)) {
+  throw new Error(
+    'Production builds require ADMOB_ANDROID_APP_ID, ADMOB_IOS_APP_ID, ADMOB_REWARDED_EXTRA_NEW_WORDS_ANDROID and ADMOB_REWARDED_EXTRA_NEW_WORDS_IOS.'
+  );
+}
 
 const skAdNetworkItems = [
   'cstr6suwn9.skadnetwork',
@@ -96,8 +103,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/app_icon.png',
   scheme: 'lexicon',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
   ios: {
+    bundleIdentifier: 'com.lexiconapp.english',
     icon: './assets/app_icon.png',
   },
   android: {
@@ -119,11 +127,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: '#F4F1EA',
         android: {
-          image: './assets/images/splash-icon.png',
+          image: './assets/images/icon.png',
           imageWidth: 76,
         },
       },
     ],
+    'expo-notifications',
     'expo-sqlite',
     'expo-font',
     'expo-sharing',
@@ -139,7 +148,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   experiments: {
     typedRoutes: true,
-    reactCompiler: true,
   },
   extra: {
     eas: {
@@ -155,5 +163,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       rewardedExtraNewWordsIos,
       testDeviceIds,
     },
+    notifications: {
+      dailyReminderHour: 19,
+      dailyReminderMinute: 0,
+    },
+    privacyPolicyUrl: PRIVACY_POLICY_URL,
   },
 });

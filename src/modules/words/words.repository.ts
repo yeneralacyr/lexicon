@@ -36,6 +36,52 @@ function mapWordListItem(row: {
   };
 }
 
+async function getCandidatesByStatusOnDatabase(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  status: 'review' | 'learning',
+  limit: number,
+  excludeWordIds: number[] = []
+) {
+  if (limit <= 0) {
+    return [];
+  }
+
+  const placeholders = excludeWordIds.length > 0 ? excludeWordIds.map(() => '?').join(', ') : null;
+
+  return db.getAllAsync<{
+    id: number;
+    english: string;
+    turkish: string;
+    sentence1: string | null;
+    sentence2: string | null;
+    sentence3: string | null;
+    sentence4: string | null;
+    sentence5: string | null;
+  }>(
+    `
+      SELECT
+        w.id,
+        w.english,
+        w.turkish,
+        w.sentence1,
+        w.sentence2,
+        w.sentence3,
+        w.sentence4,
+        w.sentence5
+      FROM word_progress p
+      INNER JOIN words w ON w.id = p.word_id
+      WHERE p.status = ?
+        AND p.is_suspended = 0
+        ${placeholders ? `AND w.id NOT IN (${placeholders})` : ''}
+      ORDER BY RANDOM()
+      LIMIT ?
+    `,
+    status,
+    ...excludeWordIds,
+    limit
+  );
+}
+
 function buildLibraryFilterQuery(filter: LibraryQuery['filter']) {
   switch (filter) {
     case 'favorites':
@@ -139,40 +185,16 @@ export async function getLibraryWordsRepository(query: LibraryQuery): Promise<Li
   };
 }
 
-export async function getLibraryReviewCandidatesRepository(): Promise<WordCandidate[]> {
+export async function getLibraryReviewCandidatesRepository(limit = 20): Promise<WordCandidate[]> {
   const db = await getDatabase();
-  const rows = await db.getAllAsync<{
-    id: number;
-    english: string;
-    turkish: string;
-    sentence1: string | null;
-    sentence2: string | null;
-    sentence3: string | null;
-    sentence4: string | null;
-    sentence5: string | null;
-  }>(
-    `
-      SELECT
-        w.id,
-        w.english,
-        w.turkish,
-        w.sentence1,
-        w.sentence2,
-        w.sentence3,
-        w.sentence4,
-        w.sentence5
-      FROM word_progress p
-      INNER JOIN words w ON w.id = p.word_id
-      WHERE p.status IN ('review', 'learning')
-        AND p.is_suspended = 0
-      ORDER BY
-        CASE p.status
-          WHEN 'review' THEN 0
-          ELSE 1
-        END ASC,
-        RANDOM()
-    `
+  const reviewRows = await getCandidatesByStatusOnDatabase(db, 'review', limit);
+  const learningRows = await getCandidatesByStatusOnDatabase(
+    db,
+    'learning',
+    Math.max(0, limit - reviewRows.length),
+    reviewRows.map((row) => row.id)
   );
+  const rows = [...reviewRows, ...learningRows];
 
   return rows.map((row) => ({
     id: row.id,

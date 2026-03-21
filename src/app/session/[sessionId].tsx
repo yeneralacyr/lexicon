@@ -1,12 +1,13 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cancelAnimation, Easing, runOnJS, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import type { StudyCardPhase } from '@/components/session/study-card';
 import { StudyCardStack } from '@/components/session/study-card-stack';
+import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, layout, spacing, type AppPalette } from '@/constants/theme';
@@ -27,6 +28,8 @@ export default function SessionScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [session, setSession] = useState<SessionDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardPhase, setCardPhase] = useState<StudyCardPhase>('word_only');
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
@@ -48,26 +51,43 @@ export default function SessionScreen() {
         return;
       }
 
-      const [nextSession, settings] = await Promise.all([getSessionDetail(sessionId), getSettings()]);
+      try {
+        const [nextSession, settings] = await Promise.all([getSessionDetail(sessionId), getSettings()]);
 
-      if (!nextSession) {
-        router.replace('/today');
-        return;
-      }
+        if (!nextSession) {
+          router.replace('/today');
+          return;
+        }
 
-      if (nextSession.sessionType === 'library_review') {
-        router.replace(resolveSessionRoute({
-          id: nextSession.id,
-          phase: nextSession.phase,
-          sessionType: nextSession.sessionType,
-        }));
-        return;
-      }
+        if (nextSession.status === 'cancelled') {
+          router.replace('/today');
+          return;
+        }
 
-      if (active) {
-        setSession(nextSession);
-        setMeaningRevealSeconds(settings.meaningRevealSeconds);
-        setCurrentIndex(resolveNextUnratedIndex(nextSession));
+        if (nextSession.status === 'completed') {
+          router.replace(`/session/complete?sessionId=${nextSession.id}`);
+          return;
+        }
+
+        if (nextSession.sessionType === 'library_review') {
+          router.replace(resolveSessionRoute({
+            id: nextSession.id,
+            phase: nextSession.phase,
+            sessionType: nextSession.sessionType,
+          }));
+          return;
+        }
+
+        if (active) {
+          setSession(nextSession);
+          setMeaningRevealSeconds(settings.meaningRevealSeconds);
+          setCurrentIndex(resolveNextUnratedIndex(nextSession));
+          setLoadError(null);
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Oturum yüklenemedi.');
+        }
       }
     }
 
@@ -76,7 +96,7 @@ export default function SessionScreen() {
     return () => {
       active = false;
     };
-  }, [router, sessionId]);
+  }, [loadAttempt, router, sessionId]);
 
   const activeItem = useMemo<SessionQueueItem | null>(() => {
     if (!session) {
@@ -154,25 +174,22 @@ export default function SessionScreen() {
     };
   }, [cardPhase, countdownProgress, handleCountdownExpired, meaningRevealSeconds]);
 
-  async function reloadSession() {
-    if (!sessionId) {
-      return null;
-    }
-
-    const nextSession = await getSessionDetail(sessionId);
-
-    if (!nextSession) {
-      throw new Error('Oturum yüklenemedi.');
-    }
-
-    setSession(nextSession);
-    setCurrentIndex(resolveNextUnratedIndex(nextSession));
-    return nextSession;
-  }
-
-  async function handleClose() {
-    setActiveSessionId(null);
-    router.replace('/today');
+  function handleClose() {
+    Alert.alert(
+      'Oturumdan çık',
+      'Bu oturumu bırakıp ana sayfaya dönmek istediğine emin misin? İlerleme kaydedilmiş olarak kalır.',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Çık',
+          style: 'destructive',
+          onPress: () => {
+            setActiveSessionId(null);
+            router.replace('/today');
+          },
+        },
+      ]
+    );
   }
 
   const handleTransitionToQuiz = useCallback(async () => {
@@ -224,12 +241,13 @@ export default function SessionScreen() {
     setSubmitError(null);
 
     try {
+      const durationMs = Math.max(0, Date.now() - itemStartedAt);
       const result = await applySessionDecision({
         sessionId,
         sessionItemId: activeItem.id,
         wordId: activeItem.wordId,
         decision,
-        durationMs: Math.max(0, Date.now() - itemStartedAt),
+        durationMs,
         currentOrderIndex: activeItem.orderIndex,
         selectedSentenceIndex: activeItem.selectedSentenceIndex,
       });
@@ -240,7 +258,9 @@ export default function SessionScreen() {
         return;
       }
 
-      const nextSession = await reloadSession();
+      const nextSession = applyDecisionLocally(session, activeItem, result, durationMs);
+      setSession(nextSession);
+      setCurrentIndex(resolveNextUnratedIndex(nextSession));
 
       if (nextSession && nextSession.items.every((item) => item.resultRating)) {
         await handleTransitionToQuiz();
@@ -270,6 +290,31 @@ export default function SessionScreen() {
   const isWide = width >= 768;
   const stackWidth = Math.min(width - spacing.lg * 2, isWide ? 540 : 388);
   const stackHeight = Math.min(Math.max(486, stackWidth * 1.3), 610);
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <DotMatrixBackground opacity={0.03} />
+          <View style={styles.loadingState}>
+            <TechnicalLabel>{loadError ? 'Oturum yuklenemedi' : 'Oturum hazirlaniyor'}</TechnicalLabel>
+            {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
+            {loadError ? (
+              <ActionButton
+                label="Tekrar dene"
+                onPress={() => {
+                  setLoadError(null);
+                  setLoadAttempt((current) => current + 1);
+                }}
+                style={styles.retryButton}
+                variant="secondary"
+              />
+            ) : null}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -347,7 +392,63 @@ export default function SessionScreen() {
 
 function resolveNextUnratedIndex(session: SessionDetail) {
   const firstUnratedIndex = session.items.findIndex((item) => !item.resultRating);
-  return firstUnratedIndex === -1 ? Math.max(0, session.items.length - 1) : firstUnratedIndex;
+  return firstUnratedIndex;
+}
+
+function applyDecisionLocally(
+  session: SessionDetail,
+  activeItem: SessionQueueItem,
+  result: {
+    rating: SessionQueueItem['resultRating'];
+    completedItems: number;
+    totalItems: number;
+    replay: false | { insertAt: number; insertedId: number } | null;
+  },
+  durationMs: number
+) {
+  const ratedItems = session.items.map((item) =>
+    item.id === activeItem.id
+      ? {
+          ...item,
+          resultRating: result.rating,
+          durationMs,
+        }
+      : item
+  );
+
+  if (!result.replay) {
+    return {
+      ...session,
+      completedItems: result.completedItems,
+      totalItems: result.totalItems,
+      items: ratedItems,
+    };
+  }
+
+  const replay = result.replay;
+  const replayItem: SessionQueueItem = {
+    ...activeItem,
+    id: replay.insertedId,
+    orderIndex: replay.insertAt,
+    resultRating: null,
+    durationMs: null,
+  };
+
+  const itemsWithReplay = ratedItems
+    .map((item) =>
+      item.id === replayItem.id || item.orderIndex < replay.insertAt
+        ? item
+        : { ...item, orderIndex: item.orderIndex + 1 }
+    )
+    .concat(replayItem)
+    .sort((left, right) => left.orderIndex - right.orderIndex || left.id - right.id);
+
+  return {
+    ...session,
+    completedItems: result.completedItems,
+    totalItems: result.totalItems,
+    items: itemsWithReplay,
+  };
 }
 
 function createStyles(colors: AppPalette) {
@@ -413,6 +514,18 @@ function createStyles(colors: AppPalette) {
       paddingVertical: spacing.xl,
       alignItems: 'center',
       gap: spacing.lg,
+    },
+    loadingState: {
+      width: '100%',
+      maxWidth: layout.maxWidth,
+      alignSelf: 'center',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    retryButton: {
+      width: '100%',
+      maxWidth: 280,
     },
     labelBlock: {
       minHeight: 24,

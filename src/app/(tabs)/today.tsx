@@ -1,11 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { maybeShowExtraNewWordsRewardedAd } from '@/ads/service';
+import { bootstrapAds, maybeShowExtraNewWordsRewardedAd } from '@/ads/service';
 import { TopBar } from '@/components/navigation/top-bar';
 import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
@@ -26,21 +26,37 @@ export default function TodayScreen() {
   const bottomInset = useFloatingTabInset();
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [startingMode, setStartingMode] = useState<SessionMode | null>(null);
   const [isUnlockingExtraNewWords, setIsUnlockingExtraNewWords] = useState(false);
+  const startLockRef = useRef(false);
 
   const refreshSnapshot = useCallback(async () => {
-    const nextSnapshot = await getDashboardSnapshot();
-    setSnapshot(nextSnapshot);
+    setLoadError(null);
+
+    try {
+      const nextSnapshot = await getDashboardSnapshot();
+      setSnapshot(nextSnapshot);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Bugünkü akış yüklenemedi.');
+    }
   }, []);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
-      const nextSnapshot = await getDashboardSnapshot();
-      if (active) {
-        setSnapshot(nextSnapshot);
+      try {
+        const nextSnapshot = await getDashboardSnapshot();
+
+        if (active) {
+          setSnapshot(nextSnapshot);
+          setLoadError(null);
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Bugünkü akış yüklenemedi.');
+        }
       }
     }
 
@@ -51,9 +67,29 @@ export default function TodayScreen() {
     return () => {
       active = false;
     };
-  }, [isFocused, refreshSnapshot]);
+  }, [isFocused]);
+
+  useEffect(() => {
+    if (!isFocused || !snapshot) {
+      return;
+    }
+
+    const needsRewardContext =
+      Boolean(snapshot.canUnlockExtraNewWords) || (snapshot.todayRewardedNewUnlocked ?? 0) > 0;
+
+    if (!needsRewardContext) {
+      return;
+    }
+
+    void bootstrapAds();
+  }, [isFocused, snapshot]);
 
   async function handleStartSession(mode: SessionMode) {
+    if (startLockRef.current || startingMode) {
+      return;
+    }
+
+    startLockRef.current = true;
     setStartingMode(mode);
 
     try {
@@ -65,7 +101,10 @@ export default function TodayScreen() {
 
       setActiveSessionId(session.id);
       router.push(resolveSessionRoute(session));
+    } catch (error) {
+      Alert.alert('Oturum açılamadı', error instanceof Error ? error.message : 'Bugünkü oturum hazırlanamadı.');
     } finally {
+      startLockRef.current = false;
       setStartingMode(null);
     }
   }
@@ -89,6 +128,11 @@ export default function TodayScreen() {
       }
 
       await refreshSnapshot();
+    } catch (error) {
+      Alert.alert(
+        'Ekstra yeni kelime açılamadı',
+        error instanceof Error ? error.message : 'Ödüllü reklam şu anda başlatılamadı.'
+      );
     } finally {
       setIsUnlockingExtraNewWords(false);
     }
@@ -151,6 +195,31 @@ export default function TodayScreen() {
         : startingMode === 'daily'
           ? 'Oturum hazırlanıyor...'
           : 'Bugünkü Oturumu Başlat';
+
+  if (!snapshot) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
+        <TopBar align="center" />
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          {loadError ? (
+            <View style={styles.loadState}>
+              <TechnicalLabel>Today yüklenemedi</TechnicalLabel>
+              <Text style={styles.loadErrorText}>{loadError}</Text>
+              <ActionButton
+                label="Tekrar dene"
+                onPress={() => {
+                  void refreshSnapshot();
+                }}
+                style={styles.retryButton}
+              />
+            </View>
+          ) : (
+            <TechnicalLabel>Yükleniyor...</TechnicalLabel>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
@@ -235,7 +304,7 @@ export default function TodayScreen() {
 
           <View style={styles.ctaBlock}>
             <ActionButton
-              disabled={queueEmpty}
+              disabled={queueEmpty || Boolean(startingMode)}
               label={primaryLabel}
               onPress={() => {
                 void handleStartSession('daily');
@@ -245,14 +314,14 @@ export default function TodayScreen() {
             {!hasActiveSession ? (
               <View style={styles.modeRow}>
                 <ModeLink
-                  disabled={(snapshot?.dueToday ?? 0) === 0}
+                  disabled={(snapshot?.dueToday ?? 0) === 0 || Boolean(startingMode)}
                   label="Sadece tekrar"
                   onPress={() => {
                     void handleStartSession('review_only');
                   }}
                 />
                 <ModeLink
-                  disabled={availableUnlockedNewWords === 0}
+                  disabled={availableUnlockedNewWords === 0 || Boolean(startingMode)}
                   label="Sadece yeni"
                   onPress={() => {
                     void handleStartSession('new_only');
@@ -361,6 +430,22 @@ function createStyles(colors: AppPalette) {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.lg,
       alignItems: 'center',
+    },
+    loadState: {
+      width: '100%',
+      maxWidth: 320,
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    loadErrorText: {
+      textAlign: 'center',
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 14,
+      lineHeight: 22,
+      color: colors.muted,
+    },
+    retryButton: {
+      width: '100%',
     },
     headerBlock: {
       width: '100%',

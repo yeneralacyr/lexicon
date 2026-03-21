@@ -10,7 +10,10 @@ let initializationPromise: Promise<void> | null = null;
 
 export function getDatabase() {
   if (!databasePromise) {
-    databasePromise = SQLite.openDatabaseAsync(APP_DB_NAME);
+    databasePromise = SQLite.openDatabaseAsync(APP_DB_NAME).catch((error) => {
+      databasePromise = null;
+      throw error;
+    });
   }
 
   return databasePromise;
@@ -24,8 +27,16 @@ export async function initializeDatabase() {
       await runMigrations(db);
       await ensureDefaultSettings(db);
       await ensureSeedData(db);
-    })();
+    })().catch((error) => {
+      initializationPromise = null;
+      throw error;
+    });
   }
 
   return initializationPromise;
+}
+
+export function resetDatabaseInitialization() {
+  initializationPromise = null;
+  databasePromise = null;
 }

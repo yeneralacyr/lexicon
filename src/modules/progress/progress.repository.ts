@@ -100,6 +100,68 @@ export async function reserveDailyNewUnlocksOnDatabase(
   };
 }
 
+export async function consumeDailyNewUnlockOnDatabase(
+  db: SQLiteDatabase,
+  input: {
+    sessionId: string;
+    sourceType: 'review' | 'new';
+  }
+) {
+  if (input.sourceType !== 'new') {
+    return null;
+  }
+
+  const session = await db.getFirstAsync<{ started_at: string }>(
+    `
+      SELECT started_at
+      FROM sessions
+      WHERE id = ?
+    `,
+    input.sessionId
+  );
+
+  if (!session?.started_at) {
+    throw new Error('Yeni kelime hakkı için oturum tarihi bulunamadı.');
+  }
+
+  const sessionDate = session.started_at.slice(0, 10);
+  const settings = await getStudySettings(db);
+  const current = await getTodayDailyUnlocksOnDatabase(db, sessionDate);
+  const hasFreeAllowance = current.freeNewUnlockedCount < settings.dailyNewLimit;
+
+  if (!hasFreeAllowance && current.rewardedNewUnlockedCount <= 0) {
+    throw new Error('Yeni kelime hakkı bulunamadı.');
+  }
+
+  const nextFreeCount = hasFreeAllowance ? current.freeNewUnlockedCount + 1 : current.freeNewUnlockedCount;
+  const nextRewardedCount = hasFreeAllowance
+    ? current.rewardedNewUnlockedCount
+    : Math.max(0, current.rewardedNewUnlockedCount - 1);
+
+  await db.runAsync(
+    `
+      INSERT INTO daily_unlocks (
+        date,
+        free_new_unlocked_count,
+        rewarded_new_unlocked_count
+      )
+      VALUES (?, ?, ?)
+      ON CONFLICT(date) DO UPDATE SET
+        free_new_unlocked_count = excluded.free_new_unlocked_count,
+        rewarded_new_unlocked_count = excluded.rewarded_new_unlocked_count
+    `,
+    sessionDate,
+    nextFreeCount,
+    nextRewardedCount
+  );
+
+  return {
+    date: sessionDate,
+    freeNewUnlockedCount: nextFreeCount,
+    rewardedNewUnlockedCount: nextRewardedCount,
+  };
+}
+
 export async function grantRewardedNewWordsOnDatabase(
   db: SQLiteDatabase,
   amount: number,

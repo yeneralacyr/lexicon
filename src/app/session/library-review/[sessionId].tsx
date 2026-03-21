@@ -19,6 +19,7 @@ import Animated, {
 
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
+import { ActionButton } from '@/components/ui/action-button';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, layout, radii, spacing, type AppPalette } from '@/constants/theme';
 import { applyLibraryReviewDecision } from '@/modules/review/review.engine';
@@ -40,6 +41,8 @@ export default function LibraryReviewScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [session, setSession] = useState<SessionDetail | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemStartedAt, setItemStartedAt] = useState(() => Date.now());
@@ -56,33 +59,46 @@ export default function LibraryReviewScreen() {
         return;
       }
 
-      const nextSession = await getSessionDetail(sessionId);
+      try {
+        const nextSession = await getSessionDetail(sessionId);
 
-      if (!nextSession) {
-        router.replace('/library');
-        return;
-      }
+        if (!nextSession) {
+          router.replace('/library');
+          return;
+        }
 
-      if (nextSession.sessionType !== 'library_review') {
-        router.replace(
-          resolveSessionRoute({
-            id: nextSession.id,
-            phase: nextSession.phase,
-            sessionType: nextSession.sessionType,
-          })
-        );
-        return;
-      }
+        if (nextSession.status === 'cancelled' || nextSession.status === 'completed') {
+          router.replace('/library');
+          return;
+        }
 
-      if (nextSession.status === 'completed') {
-        router.replace('/library');
-        return;
-      }
+        if (nextSession.sessionType !== 'library_review') {
+          router.replace(
+            resolveSessionRoute({
+              id: nextSession.id,
+              phase: nextSession.phase,
+              sessionType: nextSession.sessionType,
+            })
+          );
+          return;
+        }
 
-      if (active) {
-        setSession(nextSession);
-        setCurrentIndex(resolveNextUnratedIndex(nextSession));
-        setActiveSessionId(nextSession.id);
+        if (nextSession.totalItems > 20) {
+          setActiveSessionId(null);
+          router.replace('/library');
+          return;
+        }
+
+        if (active) {
+          setSession(nextSession);
+          setCurrentIndex(resolveNextUnratedIndex(nextSession));
+          setActiveSessionId(nextSession.id);
+          setLoadError(null);
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Review oturumu yüklenemedi.');
+        }
       }
     }
 
@@ -91,7 +107,7 @@ export default function LibraryReviewScreen() {
     return () => {
       active = false;
     };
-  }, [router, sessionId, setActiveSessionId]);
+  }, [loadAttempt, router, sessionId, setActiveSessionId]);
 
   const activeItem = useMemo<SessionQueueItem | null>(() => {
     if (!session) {
@@ -118,22 +134,6 @@ export default function LibraryReviewScreen() {
     setSubmitError(null);
   }, [activeItem?.id]);
 
-  async function reloadSession() {
-    if (!sessionId) {
-      return null;
-    }
-
-    const nextSession = await getSessionDetail(sessionId);
-
-    if (!nextSession) {
-      throw new Error('Review oturumu yüklenemedi.');
-    }
-
-    setSession(nextSession);
-    setCurrentIndex(resolveNextUnratedIndex(nextSession));
-    return nextSession;
-  }
-
   async function handleClose() {
     setActiveSessionId(null);
     router.replace('/library');
@@ -148,12 +148,13 @@ export default function LibraryReviewScreen() {
     setSubmitError(null);
 
     try {
+      const durationMs = Math.max(0, Date.now() - itemStartedAt);
       const result = await applyLibraryReviewDecision({
         sessionId,
         sessionItemId: activeItem.id,
         wordId: activeItem.wordId,
         decision,
-        durationMs: Math.max(0, Date.now() - itemStartedAt),
+        durationMs,
       });
 
       if (!result) {
@@ -168,7 +169,9 @@ export default function LibraryReviewScreen() {
         return;
       }
 
-      await reloadSession();
+      const nextSession = applyLibraryReviewDecisionLocally(session, activeItem, result.rating, durationMs);
+      setSession(nextSession);
+      setCurrentIndex(resolveNextUnratedIndex(nextSession));
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Bu karar kaydedilemedi.');
       setResetKey((value) => value + 1);
@@ -198,6 +201,31 @@ export default function LibraryReviewScreen() {
   const isWide = width >= 768;
   const stackWidth = Math.min(width - spacing.lg * 2, isWide ? 560 : 392);
   const stackHeight = Math.min(Math.max(520, stackWidth * 1.18), 620);
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <DotMatrixBackground opacity={0.03} />
+          <View style={styles.loadingState}>
+            <TechnicalLabel>{loadError ? 'Review oturumu yuklenemedi' : 'Review hazirlaniyor'}</TechnicalLabel>
+            {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
+            {loadError ? (
+              <ActionButton
+                label="Tekrar dene"
+                onPress={() => {
+                  setLoadError(null);
+                  setLoadAttempt((current) => current + 1);
+                }}
+                style={styles.retryButton}
+                variant="secondary"
+              />
+            ) : null}
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -570,7 +598,30 @@ function useCardMotionStyle(
 
 function resolveNextUnratedIndex(session: SessionDetail) {
   const firstUnratedIndex = session.items.findIndex((item) => !item.resultRating);
-  return firstUnratedIndex === -1 ? Math.max(0, session.items.length - 1) : firstUnratedIndex;
+  return firstUnratedIndex;
+}
+
+function applyLibraryReviewDecisionLocally(
+  session: SessionDetail,
+  activeItem: SessionQueueItem,
+  rating: SessionQueueItem['resultRating'],
+  durationMs: number
+) {
+  const nextItems = session.items.map((item) =>
+    item.id === activeItem.id
+      ? {
+          ...item,
+          resultRating: rating,
+          durationMs,
+        }
+      : item
+  );
+
+  return {
+    ...session,
+    completedItems: session.completedItems + 1,
+    items: nextItems,
+  };
 }
 
 function createStyles(colors: AppPalette) {
@@ -636,6 +687,18 @@ function createStyles(colors: AppPalette) {
       paddingVertical: spacing.xl,
       alignItems: 'center',
       gap: spacing.lg,
+    },
+    loadingState: {
+      width: '100%',
+      maxWidth: layout.maxWidth,
+      alignSelf: 'center',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    retryButton: {
+      width: '100%',
+      maxWidth: 280,
     },
     labelBlock: {
       minHeight: 24,

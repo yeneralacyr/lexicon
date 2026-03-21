@@ -1,5 +1,5 @@
 export const APP_DB_NAME = 'lexicon.db';
-export const APP_DB_VERSION = 4;
+export const APP_DB_VERSION = 5;
 export const WORDS_SEED_VERSION = 1;
 
 const schemaV1Sql = `
@@ -125,6 +125,43 @@ CREATE TABLE IF NOT EXISTS daily_unlocks (
 );
 `;
 
+const schemaV5Sql = `
+ALTER TABLE session_items ADD COLUMN source_type TEXT NOT NULL DEFAULT 'review';
+
+UPDATE session_items
+SET source_type = CASE
+  WHEN (
+    SELECT session_type
+    FROM sessions
+    WHERE sessions.id = session_items.session_id
+  ) = 'new_only' THEN 'new'
+  ELSE 'review'
+END
+WHERE source_type IS NULL
+   OR source_type NOT IN ('review', 'new');
+
+UPDATE sessions
+SET status = 'cancelled',
+    ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP)
+WHERE session_type != 'library_review'
+  AND status IN ('active', 'quiz')
+  AND id NOT IN (
+    SELECT id
+    FROM sessions
+    WHERE session_type != 'library_review'
+      AND status IN ('active', 'quiz')
+    ORDER BY started_at DESC, id DESC
+    LIMIT 1
+  );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_single_active_study
+  ON sessions (
+    CASE
+      WHEN session_type != 'library_review' AND status IN ('active', 'quiz') THEN 1
+    END
+  );
+`;
+
 export const migrationDefinitions = [
   {
     version: 1,
@@ -141,5 +178,9 @@ export const migrationDefinitions = [
   {
     version: 4,
     statements: [schemaV4Sql],
+  },
+  {
+    version: 5,
+    statements: [schemaV5Sql],
   },
 ] as const;

@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
 import { ActionButton } from '@/components/ui/action-button';
@@ -24,7 +24,6 @@ export default function SessionCompleteScreen() {
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [isStartingReview, setIsStartingReview] = useState(false);
-  const [isFinishingSession, setIsFinishingSession] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -68,24 +67,19 @@ export default function SessionCompleteScreen() {
 
       setActiveSessionId(session.id);
       router.replace(resolveSessionRoute(session));
+    } catch (error) {
+      Alert.alert(
+        'Tekrar oturumu açılamadı',
+        error instanceof Error ? error.message : 'Yeni review oturumu hazırlanamadı.'
+      );
     } finally {
       setIsStartingReview(false);
     }
   }
 
-  async function handleFinishDay() {
-    if (isFinishingSession) {
-      return;
-    }
-
-    setIsFinishingSession(true);
-
-    try {
-      setActiveSessionId(null);
-      router.replace('/today');
-    } finally {
-      setIsFinishingSession(false);
-    }
+  function handleFinishDay() {
+    setActiveSessionId(null);
+    router.replace('/today');
   }
 
   const isWide = width >= 820;
@@ -145,15 +139,15 @@ export default function SessionCompleteScreen() {
 
         <View style={[styles.actionRow, isWide && styles.actionRowWide]}>
           <ActionButton
-            disabled={isFinishingSession || isStartingReview}
-            label={isFinishingSession ? 'Kapanıyor...' : 'Günü Bitir'}
+            disabled={isStartingReview}
+            label="Günü Bitir"
             onPress={() => {
               void handleFinishDay();
             }}
             style={styles.primaryAction}
           />
           <ActionButton
-            disabled={isStartingReview || isFinishingSession}
+            disabled={isStartingReview}
             label={isStartingReview ? 'Tekrar hazırlanıyor...' : 'Tekrar Oturumuna Başla'}
             onPress={() => {
               void handleRereview();

@@ -1,11 +1,13 @@
 import { useIsFocused } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
 import { ActionButton } from '@/components/ui/action-button';
 import { ScreenHero } from '@/components/ui/screen-hero';
+import { TechnicalLabel } from '@/components/ui/technical-label';
+import { statusLabels } from '@/constants/status-labels';
 import { fontFamilies, radii, spacing, type AppPalette } from '@/constants/theme';
 import { buildLibraryReviewSession } from '@/modules/review/review.engine';
 import { resolveSessionRoute } from '@/modules/sessions/session-routing';
@@ -32,12 +34,12 @@ export default function LibraryScreen() {
   const [filter, setFilter] = useState<LibraryFilter>('learned');
   const [page, setPage] = useState<LibraryPage | null>(null);
   const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isStartingReview, setIsStartingReview] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
+  const refresh = useCallback(async () => {
+    try {
       const [nextWords, nextActiveSession] = await Promise.all([
         getLibraryWords({
           filter,
@@ -47,9 +49,37 @@ export default function LibraryScreen() {
         getActiveLibraryReviewSession(),
       ]);
 
-      if (active) {
-        setPage(nextWords);
-        setActiveSession(nextActiveSession);
+      setPage(nextWords);
+      setActiveSession(nextActiveSession);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Kitaplık yüklenemedi.');
+    }
+  }, [filter]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      try {
+        const [nextWords, nextActiveSession] = await Promise.all([
+          getLibraryWords({
+            filter,
+            offset: 0,
+            limit: 40,
+          }),
+          getActiveLibraryReviewSession(),
+        ]);
+
+        if (active) {
+          setPage(nextWords);
+          setActiveSession(nextActiveSession);
+          setLoadError(null);
+        }
+      } catch (error) {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Kitaplık yüklenemedi.');
+        }
       }
     }
 
@@ -63,26 +93,36 @@ export default function LibraryScreen() {
   }, [filter, isFocused]);
 
   async function handleLoadMore() {
-    if (!page?.nextOffset) {
+    if (!page?.nextOffset || isLoadingMore) {
       return;
     }
 
-    const nextPage = await getLibraryWords({
-      filter,
-      offset: page.nextOffset,
-      limit: 40,
-    });
+    setIsLoadingMore(true);
 
-    setPage((current) => {
-      if (!current) {
-        return nextPage;
-      }
+    try {
+      const nextPage = await getLibraryWords({
+        filter,
+        offset: page.nextOffset,
+        limit: 40,
+      });
 
-      return {
-        ...nextPage,
-        items: [...current.items, ...nextPage.items],
-      };
-    });
+      setPage((current) => {
+        if (!current) {
+          return nextPage;
+        }
+
+        const existingIds = new Set(current.items.map((item) => item.id));
+        return {
+          ...nextPage,
+          items: [...current.items, ...nextPage.items.filter((item) => !existingIds.has(item.id))],
+        };
+      });
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Daha fazla kayıt yüklenemedi.');
+    } finally {
+      setIsLoadingMore(false);
+    }
   }
 
   async function handleStartReview() {
@@ -107,6 +147,8 @@ export default function LibraryScreen() {
 
       setActiveSessionId(session.id);
       router.push(resolveSessionRoute(session));
+    } catch (error) {
+      Alert.alert('Review oturumu açılamadı', error instanceof Error ? error.message : 'Kitaplık review hazırlanamadı.');
     } finally {
       setIsStartingReview(false);
     }
@@ -142,6 +184,20 @@ export default function LibraryScreen() {
       }
       withTabInset>
       <View style={styles.content}>
+        {loadError ? (
+          <View style={styles.inlineErrorCard}>
+            <TechnicalLabel color={colors.error}>Kitaplık yüklenemedi</TechnicalLabel>
+            <Text style={styles.inlineErrorText}>{loadError}</Text>
+            <ActionButton
+              label="Tekrar dene"
+              onPress={() => {
+                void refresh();
+              }}
+              variant="secondary"
+            />
+          </View>
+        ) : null}
+
         {shouldShowReviewCard ? (
           <View style={styles.reviewCard}>
             <View style={styles.reviewCopy}>
@@ -211,7 +267,8 @@ export default function LibraryScreen() {
         {page?.nextOffset !== null && page?.nextOffset !== undefined ? (
           <View style={styles.loadMore}>
             <ActionButton
-              label="Daha Fazla Kayıt Yükle"
+              disabled={isLoadingMore}
+              label={isLoadingMore ? 'Yükleniyor...' : 'Daha Fazla Kayıt Yükle'}
               variant="secondary"
               onPress={() => {
                 void handleLoadMore();
@@ -227,17 +284,9 @@ export default function LibraryScreen() {
 function StatusBadge({ word }: { word: WordListItem }) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const statusMap: Record<string, string> = {
-    new: 'Yeni',
-    learning: 'Öğreniliyor',
-    review: 'Tekrar',
-    mastered: 'Ustalaştı',
-  };
   const label = word.isFavorite
     ? 'Favori'
-    : word.status === 'mastered'
-      ? 'Ustalaştı'
-      : (statusMap[word.status ?? 'new'] ?? 'Yeni');
+    : (statusLabels[word.status ?? 'new'] ?? 'Yeni');
 
   return (
     <View style={styles.badge}>
@@ -250,6 +299,19 @@ function createStyles(colors: AppPalette) {
   return StyleSheet.create({
     content: {
       gap: spacing.xl,
+    },
+    inlineErrorCard: {
+      gap: spacing.md,
+      padding: spacing.lg,
+      backgroundColor: colors.surfaceContainerLowest,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inlineErrorText: {
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 14,
+      lineHeight: 22,
+      color: colors.muted,
     },
     reviewCard: {
       gap: spacing.lg,

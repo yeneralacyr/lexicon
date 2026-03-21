@@ -120,7 +120,7 @@ function buildFillBlankCue(item: SessionQueueItem): SessionPromptViewModel {
   };
 }
 
-function getOrderedSentences(item: SessionQueueItem) {
+export function getOrderedSentences(item: SessionQueueItem) {
   if (item.sentences.length > 0) {
     return item.sentences;
   }
@@ -128,7 +128,7 @@ function getOrderedSentences(item: SessionQueueItem) {
   return item.sentence ? [item.sentence] : [];
 }
 
-function maskSentence(sentence: string, word: string) {
+export function maskSentence(sentence: string, word: string) {
   const escaped = escapeForRegExp(word.trim());
 
   if (!escaped) {
@@ -144,6 +144,6 @@ function maskSentence(sentence: string, word: string) {
   return sentence;
 }
 
-function escapeForRegExp(value: string) {
+export function escapeForRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
 import { ScreenHero } from '@/components/ui/screen-hero';
 import { TechnicalLabel } from '@/components/ui/technical-label';
+import { statusLabels } from '@/constants/status-labels';
 import { fontFamilies, radii, spacing, type AppPalette } from '@/constants/theme';
 import { searchWords } from '@/modules/words/words.service';
 import { useAppTheme } from '@/theme/app-theme-provider';
@@ -130,15 +131,7 @@ function mapSearchTag(word: WordListItem) {
   if (word.isFavorite) {
     return 'Favori';
   }
-  if (word.status === 'mastered') {
-    return 'Ustalaştı';
-  }
-  const statusMap: Record<string, string> = {
-    new: 'Yeni',
-    learning: 'Öğreniliyor',
-    review: 'Tekrar',
-  };
-  return (statusMap[word.status ?? 'new'] ?? 'Yeni').toUpperCase();
+  return (statusLabels[word.status ?? 'new'] ?? 'Yeni').toUpperCase();
 }
 
 function createStyles(colors: AppPalette) {

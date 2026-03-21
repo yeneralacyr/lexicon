@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
@@ -12,18 +12,27 @@ import { useAppTheme } from '@/theme/app-theme-provider';
 export default function Index() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
 
     async function routeNext() {
-      const [settings] = await Promise.all([getSettings(), new Promise((resolve) => setTimeout(resolve, 900))]);
+      try {
+        const settings = await getSettings();
 
-      if (!active) {
-        return;
+        if (!active) {
+          return;
+        }
+
+        setRouteError(null);
+        router.replace(settings.onboardingCompleted ? '/today' : '/onboarding');
+      } catch (error) {
+        if (active) {
+          setRouteError(error instanceof Error ? error.message : 'Uygulama başlangıç akışı hazırlanamadı.');
+        }
       }
-
-      router.replace(settings.onboardingCompleted ? '/today' : '/onboarding');
     }
 
     void routeNext();
@@ -31,7 +40,7 @@ export default function Index() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -39,29 +48,43 @@ export default function Index() {
         <DotMatrixBackground opacity={0.1} />
 
         <View style={styles.centerBlock}>
-          <TechnicalLabel style={styles.serial}>SQLite on yukleme • Yerel oncelikli cekirdek</TechnicalLabel>
+          <TechnicalLabel style={styles.serial}>SQLite ön yükleme • Yerel öncelikli çekirdek</TechnicalLabel>
           <View style={styles.logoBlock}>
             <Text style={styles.logo}>LEXICON</Text>
             <View style={styles.underline} />
           </View>
-          <TechnicalLabel style={styles.motto}>Yavas ogren, daha uzun sure hatirla</TechnicalLabel>
+          <TechnicalLabel style={styles.motto}>Yavaş öğren, daha uzun süre hatırla</TechnicalLabel>
         </View>
 
         <View style={styles.footer}>
-          <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+          <View style={styles.loadingRow}>
+            <ActivityIndicator color={colors.primary} size="small" />
           </View>
           <View style={styles.progressMeta}>
             <TechnicalLabel color={colors.muted} style={styles.progressText}>
-              Yerel depolama hazir
+              Yerel depolama hazır
             </TechnicalLabel>
             <TechnicalLabel color={colors.muted} style={styles.progressText}>
-              Yonlendiriliyor
+              Yönlendiriliyor
             </TechnicalLabel>
           </View>
           <TechnicalLabel color={colors.mutedSoft} style={styles.footnote}>
-            Sadece yerel kalici depolama
+            Sadece yerel kalıcı depolama
           </TechnicalLabel>
+          {routeError ? (
+            <View style={styles.errorState}>
+              <TechnicalLabel color={colors.error}>Başlangıç tamamlanamadı</TechnicalLabel>
+              <Text style={styles.errorText}>{routeError}</Text>
+              <Pressable
+                onPress={() => {
+                  setRouteError(null);
+                  setAttempt((current) => current + 1);
+                }}
+                style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}>
+                <Text style={styles.retryButtonText}>Tekrar dene</Text>
+              </Pressable>
+            </View>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -118,14 +141,10 @@ function createStyles(colors: AppPalette) {
       maxWidth: 280,
       gap: spacing.sm,
     },
-    progressTrack: {
-      height: 1,
-      backgroundColor: colors.border,
-    },
-    progressFill: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: colors.primary,
+    loadingRow: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 20,
     },
     progressMeta: {
       flexDirection: 'row',
@@ -139,6 +158,36 @@ function createStyles(colors: AppPalette) {
       marginTop: spacing.xl,
       fontSize: 8,
       letterSpacing: 4,
+    },
+    errorState: {
+      marginTop: spacing.lg,
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    errorText: {
+      textAlign: 'center',
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 13,
+      lineHeight: 20,
+      color: colors.muted,
+    },
+    retryButton: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    retryButtonPressed: {
+      opacity: 0.8,
+    },
+    retryButtonText: {
+      fontFamily: fontFamilies.bodyBold,
+      fontSize: 12,
+      color: colors.primary,
+      letterSpacing: 1.4,
+      textTransform: 'uppercase',
     },
   });
 }

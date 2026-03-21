@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import {
-  bootstrapAds,
   getAdsPrivacyStatus,
   openAdsPrivacyOptions,
+  setupAdsLifecycle,
   subscribeAdsPrivacyStatus,
 } from '@/ads/service';
 import type { AdsPrivacyState } from '@/ads/types';
@@ -19,10 +19,13 @@ export function AdsProvider({ children }: { children: React.ReactNode }) {
   const [privacyStatus, setPrivacyStatus] = useState<AdsPrivacyState>(() => getAdsPrivacyStatus());
 
   useEffect(() => {
-    const unsubscribe = subscribeAdsPrivacyStatus(setPrivacyStatus);
-    void bootstrapAds();
+    const unsubscribeStatus = subscribeAdsPrivacyStatus(setPrivacyStatus);
+    const teardownLifecycle = setupAdsLifecycle();
 
-    return unsubscribe;
+    return () => {
+      unsubscribeStatus();
+      teardownLifecycle();
+    };
   }, []);
 
   const value = useMemo<AdsContextValue>(

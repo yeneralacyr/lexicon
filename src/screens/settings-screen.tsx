@@ -1,10 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import { File, Paths } from 'expo-file-system';
 import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useAds } from '@/ads/provider';
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
@@ -12,6 +13,10 @@ import { ActionButton } from '@/components/ui/action-button';
 import { ScreenHero } from '@/components/ui/screen-hero';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, spacing, type AppPalette, type ThemeMode } from '@/constants/theme';
+import {
+  disableDailyReminderNotifications,
+  enableDailyReminderNotifications,
+} from '@/modules/notifications/reminders.service';
 import {
   exportProgressSnapshot,
   getAppOverview,
@@ -37,16 +42,24 @@ export default function SettingsScreen() {
   const { openPrivacyOptions, privacyStatus } = useAds();
   const { colors, setThemeModePreference, syncThemeMode } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const privacyPolicyUrl =
+    ((Constants.expoConfig?.extra?.privacyPolicyUrl as string | undefined) ?? 'https://lexicon.app/privacy').trim();
   const [settings, setSettings] = useState<StudySettings | null>(null);
   const [overview, setOverview] = useState<AppOverview | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isOpeningPrivacyOptions, setIsOpeningPrivacyOptions] = useState(false);
 
   const refresh = useCallback(async () => {
-    const [nextSettings, nextOverview] = await Promise.all([getSettings(), getAppOverview()]);
-    setSettings(nextSettings);
-    setOverview(nextOverview);
+    try {
+      const [nextSettings, nextOverview] = await Promise.all([getSettings(), getAppOverview()]);
+      setSettings(nextSettings);
+      setOverview(nextOverview);
+      setLoadError(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Ayarlar yüklenemedi.');
+    }
   }, []);
 
   useFocusEffect(
@@ -56,13 +69,49 @@ export default function SettingsScreen() {
   );
 
   async function patchSettings(updates: Partial<StudySettings>) {
-    const next = await updateSettings(updates);
-    setSettings(next);
+    try {
+      const next = await updateSettings(updates);
+      setSettings(next);
+      setLoadError(null);
+    } catch (error) {
+      Alert.alert('Ayar kaydedilemedi', error instanceof Error ? error.message : 'Ayarlar güncellenemedi.');
+    }
   }
 
   async function handleThemeModeChange(mode: ThemeMode) {
     await setThemeModePreference(mode);
     setSettings((current) => (current ? { ...current, themeMode: mode } : current));
+  }
+
+  async function handleNotificationsToggle(value: boolean) {
+    try {
+      if (value) {
+        const result = await enableDailyReminderNotifications();
+
+        if (!result.scheduled) {
+          Alert.alert(
+            'Bildirim izni gerekli',
+            "Günlük hatırlatmayı açmak için cihaz bildirim iznini vermen gerekiyor. Varsayılan hatırlatma saati her gün 19:00."
+          );
+          const next = await updateSettings({ notificationsEnabled: false });
+          setSettings(next);
+          return;
+        }
+
+        const next = await updateSettings({ notificationsEnabled: true });
+        setSettings(next);
+        return;
+      }
+
+      await disableDailyReminderNotifications();
+      const next = await updateSettings({ notificationsEnabled: false });
+      setSettings(next);
+    } catch (error) {
+      Alert.alert(
+        'Bildirim ayarı güncellenemedi',
+        error instanceof Error ? error.message : 'Hatırlatma tercihi kaydedilemedi.'
+      );
+    }
   }
 
   async function handleExport() {
@@ -153,6 +202,7 @@ export default function SettingsScreen() {
     setIsResetting(true);
 
     try {
+      await disableDailyReminderNotifications();
       await resetUserData();
       syncThemeMode('dark');
       setActiveSessionId(null);
@@ -178,6 +228,20 @@ export default function SettingsScreen() {
       withTabInset>
       <View style={styles.grid}>
         <View style={styles.primaryColumn}>
+          {loadError ? (
+            <View style={styles.inlineErrorCard}>
+              <TechnicalLabel color={colors.error}>Ayarlar yüklenemedi</TechnicalLabel>
+              <Text style={styles.inlineErrorText}>{loadError}</Text>
+              <ActionButton
+                label="Tekrar dene"
+                onPress={() => {
+                  void refresh();
+                }}
+                variant="secondary"
+              />
+            </View>
+          ) : null}
+
           <View style={styles.block}>
             <TechnicalLabel style={styles.blockLabel}>Günlük tekrar</TechnicalLabel>
             <Text style={styles.blockTitle}>Tekrar limiti</Text>
@@ -281,11 +345,11 @@ export default function SettingsScreen() {
             <View style={styles.preferenceRow}>
               <View style={styles.preferenceHeader}>
                 <Text style={styles.preferenceTitle}>Bildirimler</Text>
-                <TechnicalLabel color={colors.muted}>Günlük hatırlatma sinyalleri</TechnicalLabel>
+                <TechnicalLabel color={colors.muted}>Her gün 19:00 için tek hatırlatma</TechnicalLabel>
               </View>
               <Switch
                 onValueChange={(value) => {
-                  void patchSettings({ notificationsEnabled: value });
+                  void handleNotificationsToggle(value);
                 }}
                 thumbColor={colors.surfaceContainerLowest}
                 trackColor={{ false: colors.border, true: colors.primary }}
@@ -378,6 +442,20 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          <Pressable
+            onPress={() => {
+              void Linking.openURL(privacyPolicyUrl);
+            }}
+            style={({ pressed }) => [styles.sideCard, pressed && { opacity: 0.7 }]}>
+            <View style={styles.preferenceRow}>
+              <View style={styles.preferenceHeader}>
+                <Text style={styles.preferenceTitle}>Gizlilik Politikası</Text>
+                <TechnicalLabel color={colors.muted}>Kişisel veri ve reklam kullanımı</TechnicalLabel>
+              </View>
+              <MaterialIcons color={colors.primary} name="open-in-new" size={18} />
+            </View>
+          </Pressable>
+
           <View style={styles.actionStack}>
             <ActionButton
               disabled={isExporting || isResetting}
@@ -399,6 +477,7 @@ export default function SettingsScreen() {
       </View>
 
       <View style={styles.footerStats}>
+        <FooterStat label="Uygulama sürümü" value={`v${Constants.expoConfig?.version ?? '?'}`} />
         <FooterStat label="Veritabanı sürümü" value={`v${overview?.dbVersion ?? '0'}`} />
         <FooterStat label="Yükleme sürümü" value={`v${overview?.seedVersion ?? '0'}`} />
         <FooterStat label="Kelime arşivi" value={String(overview?.wordCount ?? 0)} />
@@ -437,6 +516,19 @@ function createStyles(colors: AppPalette) {
     },
     primaryColumn: {
       gap: spacing.xxxl,
+    },
+    inlineErrorCard: {
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surfaceContainerLowest,
+    },
+    inlineErrorText: {
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 14,
+      lineHeight: 22,
+      color: colors.muted,
     },
     block: {
       gap: spacing.lg,

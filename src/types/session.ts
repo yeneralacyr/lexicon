@@ -2,9 +2,11 @@ import type { Rating } from '@/types/progress';
 
 export type PromptType = 'recall' | 'mcq_meaning' | 'fill_blank';
 export type SessionType = 'daily' | 'review_only' | 'new_only' | 'library_review';
+export type SessionStatus = 'active' | 'quiz' | 'completed' | 'cancelled';
 export type SessionDecision = 'memorized_now' | 'show_again' | 'already_knew';
 export type LibraryReviewDecision = 'mastered' | 'keep_reviewing';
 export type SessionPhase = 'study' | 'quiz';
+export type SessionSourceType = 'review' | 'new';
 
 export type SessionQueueItem = {
   id: number;
@@ -15,6 +17,7 @@ export type SessionQueueItem = {
   sentences: string[];
   selectedSentenceIndex: number | null;
   orderIndex: number;
+  sourceType: SessionSourceType;
   promptType: PromptType;
   resultRating?: Rating | null;
   durationMs: number | null;
@@ -22,7 +25,7 @@ export type SessionQueueItem = {
 
 export type SessionDetail = {
   id: string;
-  status: string;
+  status: SessionStatus;
   phase: SessionPhase;
   sessionType: SessionType;
   startedAt: string;
@@ -51,7 +54,7 @@ export type SessionQuizItem = {
 export type SessionQuizDetail = {
   id: string;
   phase: 'quiz';
-  status: string;
+  status: SessionStatus;
   totalItems: number;
   answeredItems: number;
   items: SessionQuizItem[];
@@ -59,7 +62,7 @@ export type SessionQuizDetail = {
 
 export type SessionSummary = {
   id: string;
-  status: string;
+  status: SessionStatus;
   totalItems: number;
   completedItems: number;
   uniqueWords: number;

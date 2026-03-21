@@ -7,7 +7,7 @@ import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
-import { fontFamilies, radii, spacing, type AppPalette } from '@/constants/theme';
+import { fontFamilies, spacing, type AppPalette } from '@/constants/theme';
 import { getSettings, updateSettings } from '@/modules/progress/progress.service';
 import { useAppTheme } from '@/theme/app-theme-provider';
 
@@ -22,18 +22,25 @@ const tutorialSlides = [
     cards: ['Kısa oturumlar', 'Çevrimdışı çalışma', 'Tek kelime yerine tekrar döngüsü'],
   },
   {
-    id: 'method',
-    eyebrow: 'Adım 02 — Nasıl çalışır',
-    title: 'Kelimeyi gör, anlamı aç, 5 saniye bekle.',
-    body: 'İlk yüz sadece İngilizce kelimeyi gösterir. Dokununca Türkçe anlam açılır, sayaç biter ve sonra kelime örnek cümleyle geri döner.',
-    cards: ['Dokun ve anlamı aç', '5 saniye sonra cümleyi gör', 'Sola tekrar, yukarı zaten biliyordum, sağa ezberledim'],
+    id: 'card-loop',
+    eyebrow: 'Adım 02 — Kart akışı',
+    title: 'Önce İngilizceyi gör, sonra anlamı aç.',
+    body: 'Kart ilk anda sadece İngilizce kelimeyi gösterir. Dokununca Türkçe anlam açılır, seçtiğin kısa sayaç bitince kart İngilizce tarafa örnek cümleyle geri döner.',
+    cards: ['İngilizce kelime', 'Dokun ve Türkçeyi gör', 'Sayaç bitince cümleyle geri dön'],
+  },
+  {
+    id: 'decisions',
+    eyebrow: 'Adım 03 — Karar ver',
+    title: 'Biliyorsan beklemeden yukarı kaydır.',
+    body: 'Anlam açıkken kelimeyi zaten biliyorsan yukarı kaydırarak beklemeyi atlayabilirsin. Kart cümleyle geri geldiğinde sola kaydırırsan tekrar görürsün, sağa kaydırırsan bu oturumda ezberledin sayılır.',
+    cards: ['Anlam açıkken yukarı: zaten biliyordum', 'Sola: sonra tekrar', 'Sağa: bu turda ezberledim'],
   },
   {
     id: 'setup',
-    eyebrow: 'Adım 03 — Kurulum',
-    title: 'Günlük hızını seç ve ilk turu başlat.',
-    body: 'Hedefin düşük sürtünmeli olsun. Düzenli devam etmek, tek seferde çok kart açmaktan daha iyi işler.',
-    cards: ['5 kelime = hafif tempo', '10 kelime = dengeli', '15 kelime = yoğun'],
+    eyebrow: 'Adım 04 — Quiz ve tempo',
+    title: 'Tur bitince çoktan seçmeli quiz gelir.',
+    body: 'Oturum sonunda İngilizce kelimeler için doğru Türkçe anlamı seçersin. Son doğrulama burada yapılır. Sonra günlük hedefini seçip başlarsın.',
+    cards: ['Final kontrol: çoktan seçmeli quiz', 'Doğruysa kelime güçlenir', 'Şimdi günlük hedefini seç'],
   },
 ] as const;
 
@@ -142,7 +149,7 @@ export default function OnboardingScreen() {
                             onPress={() => setSelected(value)}
                             style={[styles.optionCard, active && styles.optionCardActive]}>
                             <View style={styles.optionCopy}>
-                              <Text style={[styles.optionNumber, active && styles.optionNumberActive]}>{value}</Text>
+                            <Text style={[styles.optionNumber, active && styles.optionNumberActive]}>{value}</Text>
                               <TechnicalLabel
                                 color={active ? `rgba(255,255,255,0.74)` : colors.muted}
                                 style={styles.optionLabel}>
@@ -158,7 +165,7 @@ export default function OnboardingScreen() {
                     </View>
 
                     <TechnicalLabel color={colors.mutedSoft} style={styles.setupHint}>
-                      Hedefini daha sonra Ayarlar sekmesinden değiştirebilirsin.
+                      Hedefini daha sonra Ayarlar sekmesinden değiştirebilirsin. Verileri sıfırlarsan bu kısa turu yeniden görebilirsin.
                     </TechnicalLabel>
                   </View>
                 )}

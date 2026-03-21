@@ -6,6 +6,7 @@ import * as Sharing from 'expo-sharing';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { useAds } from '@/ads/provider';
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
 import { ActionButton } from '@/components/ui/action-button';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
@@ -24,7 +25,8 @@ import type { AppOverview, StudySettings } from '@/types/db';
 import { formatShortDate } from '@/utils/dates';
 
 const newWordOptions = [5, 10, 15];
-const themeModeOptions: Array<{ label: string; value: ThemeMode }> = [
+const revealSecondOptions = [3, 5, 7];
+const themeModeOptions: { label: string; value: ThemeMode }[] = [
   { label: 'Otomatik', value: 'system' },
   { label: 'Açık', value: 'light' },
   { label: 'Koyu', value: 'dark' },
@@ -33,12 +35,14 @@ const themeModeOptions: Array<{ label: string; value: ThemeMode }> = [
 export default function SettingsScreen() {
   const router = useRouter();
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
+  const { openPrivacyOptions, privacyStatus } = useAds();
   const { colors, setThemeModePreference, syncThemeMode } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [settings, setSettings] = useState<StudySettings | null>(null);
   const [overview, setOverview] = useState<AppOverview | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isOpeningPrivacyOptions, setIsOpeningPrivacyOptions] = useState(false);
 
   const refresh = useCallback(async () => {
     const [nextSettings, nextOverview] = await Promise.all([getSettings(), getAppOverview()]);
@@ -99,6 +103,32 @@ export default function SettingsScreen() {
     }
   }
 
+  async function handleOpenPrivacyOptions() {
+    if (isOpeningPrivacyOptions) {
+      return;
+    }
+
+    setIsOpeningPrivacyOptions(true);
+
+    try {
+      const opened = await openPrivacyOptions();
+
+      if (!opened) {
+        Alert.alert(
+          'Gizlilik seçenekleri şu an kullanılamıyor',
+          'Bu seçenek yalnızca AdMob modülüyle yeniden build alınmış yerel native sürümde ve gerekli olduğunda açılır.'
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Gizlilik seçenekleri açılamadı',
+        error instanceof Error ? error.message : 'Reklam gizliliği ekranı açılamadı.'
+      );
+    } finally {
+      setIsOpeningPrivacyOptions(false);
+    }
+  }
+
   function handleResetPrompt() {
     if (isResetting) {
       return;
@@ -125,7 +155,7 @@ export default function SettingsScreen() {
 
     try {
       await resetUserData();
-      syncThemeMode('system');
+      syncThemeMode('dark');
       setActiveSessionId(null);
       await refresh();
       router.replace('/onboarding');
@@ -217,6 +247,36 @@ export default function SettingsScreen() {
               </View>
             </View>
           </View>
+
+          <View style={styles.block}>
+            <TechnicalLabel style={styles.blockLabel}>Kart ritmi</TechnicalLabel>
+            <Text style={styles.blockTitle}>Anlam bekleme süresi</Text>
+            <Text style={styles.capacityHint}>
+              Türkçe anlam açıldıktan sonra örnek cümlenin ne kadar bekleyip görüneceğini seç. Biliyorsan bekleme sırasında yukarı kaydırarak kartı erken bitirebilirsin.
+            </Text>
+            <View style={styles.segmentRow}>
+              {revealSecondOptions.map((option) => {
+                const active = settings?.meaningRevealSeconds === option;
+
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => {
+                      void patchSettings({ meaningRevealSeconds: option });
+                    }}
+                    style={[styles.segment, active && styles.segmentActive]}>
+                    <Text
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                      numberOfLines={1}
+                      style={[styles.segmentText, active && styles.segmentTextActive]}>
+                      {`${option} sn`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         <View style={styles.sideColumn}>
@@ -263,6 +323,62 @@ export default function SettingsScreen() {
                 trackColor={{ false: colors.border, true: colors.primary }}
                 value={settings?.notificationsEnabled ?? false}
               />
+            </View>
+          </View>
+
+          <View style={styles.sideCard}>
+            <View style={styles.preferenceBlock}>
+              <View style={styles.preferenceHeader}>
+                <Text style={styles.preferenceTitle}>Reklam gizliliği</Text>
+                <TechnicalLabel color={colors.muted}>Consent ve privacy seçenekleri</TechnicalLabel>
+              </View>
+
+              <View style={styles.privacyStatusCard}>
+                <View style={styles.privacyStatusCopy}>
+                  <Text style={styles.capacityLabel}>
+                    {privacyStatus.isAvailable
+                      ? privacyStatus.canRequestAds
+                        ? privacyStatus.requestNonPersonalizedAdsOnly
+                          ? 'Kişiselleştirilmemiş reklam modu'
+                          : 'Reklam isteği hazır'
+                        : privacyStatus.consentStatus === 'required'
+                          ? 'İzin bekleniyor'
+                          : 'Reklamlar devre dışı'
+                      : 'Native build gerekli'}
+                  </Text>
+                  <Text style={styles.capacityHint}>
+                    {privacyStatus.isAvailable
+                      ? privacyStatus.privacyOptionsRequired
+                        ? 'Gizlilik seçeneklerini tekrar açarak reklam tercihini gözden geçirebilirsin.'
+                        : privacyStatus.canRequestAds
+                          ? 'AdMob yalnızca doğal geçiş anlarında çalışır; çalışma ekranları reklam göstermez.'
+                          : 'Consent alınmadan reklam talebi yapılmaz. Öğrenme akışı normal şekilde devam eder.'
+                      : 'Expo Go, web veya AdMob modülü eklenmeden alınmış eski native build üzerinde reklam katmanı devreye girmez.'}
+                  </Text>
+                </View>
+                <Text style={styles.inlineValue}>
+                  {privacyStatus.isInitialized ? 'Hazır' : privacyStatus.isAvailable ? 'Bekliyor' : 'Kapalı'}
+                </Text>
+              </View>
+
+              <ActionButton
+                disabled={
+                  isOpeningPrivacyOptions ||
+                  !privacyStatus.isAvailable ||
+                  !privacyStatus.privacyOptionsRequired
+                }
+                label={isOpeningPrivacyOptions ? 'Açılıyor...' : 'Gizlilik seçeneklerini aç'}
+                onPress={() => {
+                  void handleOpenPrivacyOptions();
+                }}
+                variant="secondary"
+              />
+
+              {privacyStatus.lastError ? (
+                <TechnicalLabel color={colors.error} style={styles.privacyError}>
+                  {privacyStatus.lastError}
+                </TechnicalLabel>
+              ) : null}
             </View>
           </View>
 
@@ -318,7 +434,7 @@ export default function SettingsScreen() {
         <FooterStat label="Veritabanı sürümü" value={`v${overview?.dbVersion ?? '0'}`} />
         <FooterStat label="Yükleme sürümü" value={`v${overview?.seedVersion ?? '0'}`} />
         <FooterStat label="Kelime arşivi" value={String(overview?.wordCount ?? 0)} />
-        <FooterStat align="right" label="Aktif mod" value={settings?.themeMode?.toUpperCase() ?? 'SYSTEM'} />
+        <FooterStat align="right" label="Aktif mod" value={settings?.themeMode?.toUpperCase() ?? 'DARK'} />
       </View>
     </FullscreenScrollScene>
   );
@@ -476,6 +592,23 @@ function createStyles(colors: AppPalette) {
     preferenceBlock: {
       gap: spacing.md,
     },
+    privacyStatusCard: {
+      minHeight: 96,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.surfaceContainerLow,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+    },
+    privacyStatusCopy: {
+      flex: 1,
+      minWidth: 0,
+      gap: spacing.xs,
+    },
     preferenceRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -537,6 +670,9 @@ function createStyles(colors: AppPalette) {
     },
     actionStack: {
       gap: spacing.md,
+    },
+    privacyError: {
+      marginTop: spacing.xs,
     },
     dangerButton: {
       backgroundColor: colors.errorContainer,

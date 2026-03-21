@@ -26,7 +26,7 @@ export type WordCandidate = {
   sentences: string[];
 };
 
-export type LibraryFilter = 'all' | 'new' | 'learning' | 'review' | 'mastered' | 'favorites';
+export type LibraryFilter = 'learned' | 'learning' | 'review' | 'mastered' | 'favorites';
 
 export type LibraryQuery = {
   filter: LibraryFilter;

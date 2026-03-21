@@ -38,6 +38,7 @@ export type SessionQuizItem = {
   turkish: string;
   normalizedTurkish: string;
   orderIndex: number;
+  options: string[];
   userAnswer: string | null;
   normalizedAnswer: string | null;
   isCorrect: boolean | null;
@@ -59,6 +60,7 @@ export type SessionSummary = {
   status: string;
   totalItems: number;
   completedItems: number;
+  uniqueWords: number;
   newItems: number;
   reviewItems: number;
   tomorrowCount: number;

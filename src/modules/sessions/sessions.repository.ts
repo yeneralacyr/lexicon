@@ -564,6 +564,7 @@ export async function getSessionQuizDetailRepository(sessionId: string): Promise
       turkish: item.turkish,
       normalizedTurkish: item.normalized_turkish,
       orderIndex: item.order_index,
+      options: [],
       userAnswer: item.user_answer,
       normalizedAnswer: item.normalized_answer,
       isCorrect: item.is_correct === null ? null : Boolean(item.is_correct),
@@ -716,12 +717,21 @@ export async function getSessionSummaryRepository(sessionId: string): Promise<Se
     todayIso(),
     plusDaysIso(1)
   );
+  const uniqueWords = await db.getFirstAsync<{ count: number }>(
+    `
+      SELECT COUNT(DISTINCT word_id) as count
+      FROM session_items
+      WHERE session_id = ?
+    `,
+    sessionId
+  );
 
   return {
     id: session.id,
     status: session.status,
     totalItems: session.total_items,
     completedItems: session.completed_items,
+    uniqueWords: uniqueWords?.count ?? 0,
     newItems: session.new_items,
     reviewItems: session.review_items,
     tomorrowCount: tomorrowCount?.count ?? 0,

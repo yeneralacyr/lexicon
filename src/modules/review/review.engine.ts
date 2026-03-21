@@ -34,6 +34,12 @@ import { createSessionId } from '@/utils/random';
 
 export type SessionMode = 'daily' | 'review_only' | 'new_only';
 
+type SessionEntry = {
+  word: Awaited<ReturnType<typeof getNewWordCandidatesRepository>>[number];
+  source: 'review' | 'new';
+  sourceIndex: number;
+};
+
 export async function getDashboardSnapshot(): Promise<ReviewDashboardSnapshot> {
   const db = await getDatabase();
   return getDashboardSnapshotQuery(db);
@@ -45,6 +51,42 @@ function pickSelectedSentenceIndex(sentences: string[], orderIndex: number) {
   }
 
   return (orderIndex % sentences.length) + 1;
+}
+
+function shuffleList<T>(items: T[]) {
+  const next = [...items];
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const current = next[index];
+    next[index] = next[swapIndex];
+    next[swapIndex] = current;
+  }
+
+  return next;
+}
+
+function mixSessionEntries(reviewItems: SessionEntry[], newItems: SessionEntry[]) {
+  const mixed: SessionEntry[] = [];
+  const reviewQueue = [...reviewItems];
+  const newQueue = [...newItems];
+  let preferReview = reviewQueue.length >= newQueue.length;
+
+  while (reviewQueue.length > 0 || newQueue.length > 0) {
+    if (preferReview && reviewQueue.length > 0) {
+      mixed.push(reviewQueue.shift() as SessionEntry);
+    } else if (!preferReview && newQueue.length > 0) {
+      mixed.push(newQueue.shift() as SessionEntry);
+    } else if (reviewQueue.length > 0) {
+      mixed.push(reviewQueue.shift() as SessionEntry);
+    } else if (newQueue.length > 0) {
+      mixed.push(newQueue.shift() as SessionEntry);
+    }
+
+    preferReview = !preferReview;
+  }
+
+  return mixed;
 }
 
 export async function buildDailySession(mode: SessionMode = 'daily'): Promise<BuildDailySessionResult | null> {
@@ -62,18 +104,20 @@ export async function buildDailySession(mode: SessionMode = 'daily'): Promise<Bu
   const settings = await getStudySettingsRepository();
   const dueWords = mode === 'new_only' ? [] : await getDueWordCandidatesRepository(settings.dailyReviewLimit);
   const newWords = mode === 'review_only' ? [] : await getNewWordCandidatesRepository(settings.dailyNewLimit);
-  const selectedWords = [
-    ...dueWords.map((word, index) => ({
+  const shuffledDueWords = shuffleList(dueWords);
+  const shuffledNewWords = shuffleList(newWords);
+  const selectedWords = mixSessionEntries(
+    shuffledDueWords.map((word, index) => ({
       word,
       source: 'review' as const,
       sourceIndex: index,
     })),
-    ...newWords.map((word, index) => ({
+    shuffledNewWords.map((word, index) => ({
       word,
       source: 'new' as const,
       sourceIndex: index,
-    })),
-  ];
+    }))
+  );
 
   if (selectedWords.length === 0) {
     return null;
@@ -89,8 +133,8 @@ export async function buildDailySession(mode: SessionMode = 'daily'): Promise<Bu
       id: sessionId,
       sessionType: mode,
       totalItems: selectedWords.length,
-      newItems: newWords.length,
-      reviewItems: dueWords.length,
+      newItems: shuffledNewWords.length,
+      reviewItems: shuffledDueWords.length,
     });
 
     await createSessionItemsOnDatabase(
@@ -201,7 +245,28 @@ export async function beginSessionQuiz(sessionId: string) {
 }
 
 export async function getSessionQuizSnapshot(sessionId: string): Promise<SessionQuizDetail | null> {
-  return getSessionQuizDetailRepository(sessionId);
+  const quiz = await getSessionQuizDetailRepository(sessionId);
+
+  if (!quiz) {
+    return null;
+  }
+
+  const distractorPool = await getQuizDistractorPool(
+    quiz.items.map((item) => ({
+      wordId: item.wordId,
+      turkish: item.turkish,
+      normalizedTurkish: item.normalizedTurkish,
+      orderIndex: item.orderIndex,
+    }))
+  );
+
+  return {
+    ...quiz,
+    items: quiz.items.map((item) => ({
+      ...item,
+      options: buildQuizOptions(item, quiz.items, distractorPool, sessionId),
+    })),
+  };
 }
 
 export async function submitSessionQuizAnswer(params: {
@@ -279,6 +344,141 @@ export async function finalizeQuizSession(sessionId: string) {
     await db.execAsync('ROLLBACK');
     throw error;
   }
+}
+
+type QuizDistractor = {
+  wordId: number;
+  turkish: string;
+  normalizedTurkish: string;
+  orderIndex: number;
+};
+
+async function getQuizDistractorPool(sessionItems: QuizDistractor[]): Promise<QuizDistractor[]> {
+  const db = await getDatabase();
+  const sessionWordIds = sessionItems.map((item) => item.wordId);
+  const sessionMeanings = new Set(sessionItems.map((item) => item.normalizedTurkish));
+  const placeholders =
+    sessionWordIds.length > 0 ? sessionWordIds.map(() => '?').join(', ') : null;
+  const baseRows = await db.getAllAsync<{
+    id: number;
+    turkish: string;
+    normalized_turkish: string;
+  }>(
+    `
+      SELECT id, turkish, normalized_turkish
+      FROM words
+      ${placeholders ? `WHERE id NOT IN (${placeholders})` : ''}
+      ORDER BY id ASC
+      LIMIT 96
+    `,
+    ...(sessionWordIds as (string | number)[])
+  );
+
+  const rows = baseRows.filter((row) => !sessionMeanings.has(row.normalized_turkish));
+
+  return rows.map((row, index) => ({
+    wordId: row.id,
+    turkish: row.turkish,
+    normalizedTurkish: row.normalized_turkish,
+    orderIndex: sessionItems.length + index,
+  }));
+}
+
+function buildQuizOptions(
+  currentItem: SessionQuizDetail['items'][number],
+  allItems: SessionQuizDetail['items'],
+  distractorPool: QuizDistractor[],
+  sessionId: string
+) {
+  const candidateMap = new Map<string, QuizDistractor>();
+
+  for (const item of allItems) {
+    if (item.wordId === currentItem.wordId || item.normalizedTurkish === currentItem.normalizedTurkish) {
+      continue;
+    }
+
+    const existing = candidateMap.get(item.normalizedTurkish);
+
+    if (!existing) {
+      candidateMap.set(item.normalizedTurkish, {
+        wordId: item.wordId,
+        turkish: item.turkish,
+        normalizedTurkish: item.normalizedTurkish,
+        orderIndex: item.orderIndex,
+      });
+      continue;
+    }
+
+    if (Math.abs(item.orderIndex - currentItem.orderIndex) < Math.abs(existing.orderIndex - currentItem.orderIndex)) {
+      candidateMap.set(item.normalizedTurkish, {
+        wordId: item.wordId,
+        turkish: item.turkish,
+        normalizedTurkish: item.normalizedTurkish,
+        orderIndex: item.orderIndex,
+      });
+    }
+  }
+
+  const sessionDistractors = [...candidateMap.values()].sort((left, right) => {
+    const leftDistance = Math.abs(left.orderIndex - currentItem.orderIndex);
+    const rightDistance = Math.abs(right.orderIndex - currentItem.orderIndex);
+    return leftDistance - rightDistance || left.orderIndex - right.orderIndex;
+  });
+
+  const distractors: QuizDistractor[] = [];
+  const usedNormalized = new Set<string>([currentItem.normalizedTurkish]);
+
+  for (const candidate of sessionDistractors) {
+    if (distractors.length >= 3) {
+      break;
+    }
+
+    if (usedNormalized.has(candidate.normalizedTurkish)) {
+      continue;
+    }
+
+    distractors.push(candidate);
+    usedNormalized.add(candidate.normalizedTurkish);
+  }
+
+  for (const candidate of distractorPool) {
+    if (distractors.length >= 3) {
+      break;
+    }
+
+    if (usedNormalized.has(candidate.normalizedTurkish)) {
+      continue;
+    }
+
+    distractors.push(candidate);
+    usedNormalized.add(candidate.normalizedTurkish);
+  }
+
+  return stableShuffle(
+    [currentItem.turkish, ...distractors.map((candidate) => candidate.turkish)],
+    `${sessionId}:${currentItem.wordId}`
+  );
+}
+
+function stableShuffle(options: string[], seed: string) {
+  return [...options]
+    .map((option, index) => ({
+      option,
+      rank: seededRank(`${seed}:${option}:${index}`),
+    }))
+    .sort((left, right) => left.rank - right.rank || left.option.localeCompare(right.option, 'tr'))
+    .map((entry) => entry.option);
+}
+
+function seededRank(input: string) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
 }
 
 export async function finalizeSession(sessionId: string) {

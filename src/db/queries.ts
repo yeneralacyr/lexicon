@@ -8,10 +8,11 @@ import { todayIso } from '@/utils/dates';
 const defaultSettings = {
   dailyNewLimit: 10,
   dailyReviewLimit: 20,
+  meaningRevealSeconds: 5,
   sessionGoalMinutes: 5,
   onboardingCompleted: false,
   notificationsEnabled: false,
-  themeMode: 'system',
+  themeMode: 'dark',
 } satisfies StudySettings;
 
 export async function upsertSetting(db: SQLiteDatabase, key: string, value: string) {
@@ -36,6 +37,9 @@ export async function ensureDefaultSettings(db: SQLiteDatabase) {
   if (!presentKeys.has('daily_review_limit')) {
     await upsertSetting(db, 'daily_review_limit', String(defaultSettings.dailyReviewLimit));
   }
+  if (!presentKeys.has('meaning_reveal_seconds')) {
+    await upsertSetting(db, 'meaning_reveal_seconds', String(defaultSettings.meaningRevealSeconds));
+  }
   if (!presentKeys.has('session_goal_minutes')) {
     await upsertSetting(db, 'session_goal_minutes', String(defaultSettings.sessionGoalMinutes));
   }
@@ -57,6 +61,7 @@ export async function getStudySettings(db: SQLiteDatabase): Promise<StudySetting
   return {
     dailyNewLimit: Number(map.get('daily_new_limit') ?? defaultSettings.dailyNewLimit),
     dailyReviewLimit: Number(map.get('daily_review_limit') ?? defaultSettings.dailyReviewLimit),
+    meaningRevealSeconds: Number(map.get('meaning_reveal_seconds') ?? defaultSettings.meaningRevealSeconds),
     sessionGoalMinutes: Number(map.get('session_goal_minutes') ?? defaultSettings.sessionGoalMinutes),
     onboardingCompleted: Boolean(Number(map.get('onboarding_completed') ?? Number(defaultSettings.onboardingCompleted))),
     notificationsEnabled: Boolean(
@@ -75,6 +80,9 @@ export async function updateStudySettingsQuery(
   }
   if (updates.dailyReviewLimit !== undefined) {
     await upsertSetting(db, 'daily_review_limit', String(updates.dailyReviewLimit));
+  }
+  if (updates.meaningRevealSeconds !== undefined) {
+    await upsertSetting(db, 'meaning_reveal_seconds', String(updates.meaningRevealSeconds));
   }
   if (updates.sessionGoalMinutes !== undefined) {
     await upsertSetting(db, 'session_goal_minutes', String(updates.sessionGoalMinutes));

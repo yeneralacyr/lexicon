@@ -32,6 +32,7 @@ export type AppOverview = {
 export type StudySettings = {
   dailyNewLimit: number;
   dailyReviewLimit: number;
+  meaningRevealSeconds: number;
   sessionGoalMinutes: number;
   onboardingCompleted: boolean;
   notificationsEnabled: boolean;

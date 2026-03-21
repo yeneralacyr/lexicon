@@ -9,6 +9,7 @@ import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, layout, spacing, type AppPalette } from '@/constants/theme';
+import { maybeShowSessionCompleteInterstitial } from '@/ads/service';
 import { buildDailySession, getSessionSummarySnapshot } from '@/modules/review/review.engine';
 import { useSessionStore } from '@/store/sessionStore';
 import { useAppTheme } from '@/theme/app-theme-provider';
@@ -24,6 +25,7 @@ export default function SessionCompleteScreen() {
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [isStartingReview, setIsStartingReview] = useState(false);
+  const [isFinishingSession, setIsFinishingSession] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +74,22 @@ export default function SessionCompleteScreen() {
     }
   }
 
+  async function handleFinishDay() {
+    if (isFinishingSession) {
+      return;
+    }
+
+    setIsFinishingSession(true);
+
+    try {
+      await maybeShowSessionCompleteInterstitial(summary);
+    } finally {
+      setActiveSessionId(null);
+      router.replace('/today');
+      setIsFinishingSession(false);
+    }
+  }
+
   const isWide = width >= 820;
 
   return (
@@ -94,23 +112,25 @@ export default function SessionCompleteScreen() {
 
           <View style={styles.heroBlock}>
             <ResponsiveDisplayText numberOfLines={2} style={styles.heroTitle} variant="hero">
-              {`${summary?.completedItems ?? 0} kart tamamlandı`}
+              {`${summary?.uniqueWords ?? 0} kelime doğrulandı`}
             </ResponsiveDisplayText>
-            <Text style={styles.heroSubtitle}>Bugünkü döngü başarıyla kapandı</Text>
+            <Text style={styles.heroSubtitle}>
+              {`${summary?.completedItems ?? 0} kart işlendi • ${summary?.newItems ?? 0} yeni • ${summary?.reviewItems ?? 0} tekrar`}
+            </Text>
           </View>
 
           <View style={[styles.metricsGrid, isWide && styles.metricsGridWide]}>
             <MetricTile
               icon="history"
-              label="Tekrar"
+              label="Çevrilen kartlar"
               tone="low"
-              value={summary?.reviewItems ?? 0}
+              value={summary?.completedItems ?? 0}
             />
             <MetricTile
-              icon="add-circle-outline"
-              label="Yeni"
+              icon="verified"
+              label="Benzersiz kelimeler"
               tone="default"
-              value={summary?.newItems ?? 0}
+              value={summary?.uniqueWords ?? 0}
             />
             <MetricTile
               icon="event-available"
@@ -130,14 +150,15 @@ export default function SessionCompleteScreen() {
 
           <View style={[styles.actionRow, isWide && styles.actionRowWide]}>
             <ActionButton
-              label="Günü Bitir"
+              disabled={isFinishingSession || isStartingReview}
+              label={isFinishingSession ? 'Kapanıyor...' : 'Günü Bitir'}
               onPress={() => {
-                setActiveSessionId(null);
-                router.replace('/today');
+                void handleFinishDay();
               }}
               style={styles.primaryAction}
             />
             <ActionButton
+              disabled={isStartingReview || isFinishingSession}
               label={isStartingReview ? 'Tekrar hazırlanıyor...' : 'Tekrar Oturumuna Başla'}
               onPress={() => {
                 void handleRereview();

@@ -10,13 +10,10 @@ import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, radii, spacing, type AppPalette } from '@/constants/theme';
 import { getLibraryWords } from '@/modules/words/words.service';
 import { useAppTheme } from '@/theme/app-theme-provider';
-import type { LibraryPage, WordListItem } from '@/types/word';
-
-type LibraryFilter = 'all' | 'new' | 'learning' | 'review' | 'mastered' | 'favorites';
+import type { LibraryFilter, LibraryPage, WordListItem } from '@/types/word';
 
 const filterLabels: Record<LibraryFilter, string> = {
-  all: 'Tümü',
-  new: 'Yeni',
+  learned: 'Öğrenilen',
   learning: 'Öğreniliyor',
   review: 'Tekrar',
   mastered: 'Ustalaştı',
@@ -27,7 +24,7 @@ export default function LibraryScreen() {
   const isFocused = useIsFocused();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [filter, setFilter] = useState<LibraryFilter>('all');
+  const [filter, setFilter] = useState<LibraryFilter>('learned');
   const [page, setPage] = useState<LibraryPage | null>(null);
 
   useEffect(() => {
@@ -86,7 +83,7 @@ export default function LibraryScreen() {
             Kitaplık
           </ResponsiveDisplayText>
           <TechnicalLabel color={colors.muted}>
-            {page?.totalWords ?? 0} kelime • {page?.learnedCount ?? 0} öğrenilen
+            {page?.totalCount ?? 0} kayıt • {page?.learnedCount ?? 0} toplam öğrenilen
           </TechnicalLabel>
         </View>
       }
@@ -118,7 +115,7 @@ export default function LibraryScreen() {
         {page && page.items.length === 0 ? (
           <View style={styles.emptyRow}>
             <Text style={styles.emptyText}>
-              Bu filtrede kart görünmüyor. Farklı bir durum seçebilir ya da birkaç oturum tamamlayıp burayı doldurabilirsin.
+              Kitaplık sadece öğrenmeye başladığın kelimeleri gösterir. Birkaç oturum tamamladıktan sonra burası dolmaya başlayacak.
             </Text>
           </View>
         ) : null}

@@ -1,10 +1,9 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
@@ -17,6 +16,7 @@ import type { SessionQuizDetail } from '@/types/session';
 type FeedbackState = {
   isCorrect: boolean;
   correctMeaning: string;
+  selectedOption: string;
 };
 
 export default function SessionQuizScreen() {
@@ -28,7 +28,7 @@ export default function SessionQuizScreen() {
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [quiz, setQuiz] = useState<SessionQuizDetail | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answer, setAnswer] = useState('');
+  const [pendingSelection, setPendingSelection] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,21 +76,11 @@ export default function SessionQuizScreen() {
   }, [router, sessionId, setActiveSessionId]);
 
   useEffect(() => {
-    if (!quiz || quiz.items.length === 0) {
-      return;
-    }
-
-    if (quiz.items.every((item) => item.answeredAt)) {
-      void handleFinalize();
-    }
-  }, [quiz]);
-
-  useEffect(() => {
     if (!quiz?.items[currentIndex]) {
       return;
     }
 
-    setAnswer('');
+    setPendingSelection(null);
     setFeedback(null);
     setError(null);
     setAnswerStartedAt(Date.now());
@@ -115,7 +105,7 @@ export default function SessionQuizScreen() {
     return nextQuiz;
   }
 
-  async function handleFinalize() {
+  const handleFinalize = useCallback(async () => {
     if (!sessionId || isFinalizingRef.current) {
       return;
     }
@@ -129,21 +119,32 @@ export default function SessionQuizScreen() {
     } finally {
       isFinalizingRef.current = false;
     }
-  }
+  }, [router, sessionId, setActiveSessionId]);
 
-  async function handleSubmit() {
-    if (!sessionId || !currentItem || isSubmitting) {
+  useEffect(() => {
+    if (!quiz || quiz.items.length === 0) {
+      return;
+    }
+
+    if (quiz.items.every((item) => item.answeredAt)) {
+      void handleFinalize();
+    }
+  }, [handleFinalize, quiz]);
+
+  async function handleSubmit(selectedOption: string) {
+    if (!sessionId || !currentItem || isSubmitting || feedback) {
       return;
     }
 
     setIsSubmitting(true);
+    setPendingSelection(selectedOption);
     setError(null);
 
     try {
       const result = await submitSessionQuizAnswer({
         sessionId,
         wordId: currentItem.wordId,
-        answer,
+        answer: selectedOption,
         expectedNormalizedMeaning: currentItem.normalizedTurkish,
         durationMs: Math.max(0, Date.now() - answerStartedAt),
       });
@@ -151,11 +152,12 @@ export default function SessionQuizScreen() {
       setFeedback({
         isCorrect: result.isCorrect,
         correctMeaning: currentItem.turkish,
+        selectedOption,
       });
 
       const nextQuiz = await reloadQuiz();
 
-      await delay(850);
+      await delay(1100);
 
       if (!nextQuiz) {
         return;
@@ -170,6 +172,7 @@ export default function SessionQuizScreen() {
 
       setCurrentIndex(nextIndex);
     } catch (submissionError) {
+      setPendingSelection(null);
       setError(submissionError instanceof Error ? submissionError.message : 'Yanıt kaydedilemedi.');
     } finally {
       setIsSubmitting(false);
@@ -210,25 +213,61 @@ export default function SessionQuizScreen() {
             <ResponsiveDisplayText numberOfLines={2} style={styles.title} variant="section">
               {currentItem?.english ?? 'Quiz hazırlanıyor'}
             </ResponsiveDisplayText>
-            <Text style={styles.subtitle}>İngilizce kelimenin Türkçe karşılığını yaz.</Text>
+            <Text style={styles.subtitle}>Doğru Türkçe anlamı seç.</Text>
           </View>
 
           <View style={styles.answerCard}>
-            <TextInput
-              autoCapitalize="sentences"
-              autoCorrect={false}
-              editable={!isSubmitting && !feedback}
-              onChangeText={setAnswer}
-              onSubmitEditing={() => {
-                void handleSubmit();
-              }}
-              placeholder="Türkçe anlam"
-              placeholderTextColor={colors.muted}
-              returnKeyType="done"
-              selectionColor={colors.primary}
-              style={styles.input}
-              value={answer}
-            />
+            <View style={styles.optionsList}>
+              {(currentItem?.options ?? []).map((option) => {
+                const isSelected = feedback?.selectedOption === option || pendingSelection === option;
+                const isCorrectOption = currentItem?.turkish === option;
+                const showCorrect = Boolean(feedback) && isCorrectOption;
+                const showWrong = Boolean(feedback) && isSelected && !feedback?.isCorrect;
+                const showPending = !feedback && pendingSelection === option;
+
+                return (
+                  <Pressable
+                    disabled={isSubmitting || Boolean(feedback)}
+                    key={option}
+                    onPress={() => {
+                      void handleSubmit(option);
+                    }}
+                    style={({ pressed }) => [
+                      styles.optionButton,
+                      isSelected && styles.optionButtonSelected,
+                      showPending && styles.optionButtonPending,
+                      showCorrect && styles.optionButtonCorrect,
+                      showWrong && styles.optionButtonWrong,
+                      pressed && !feedback && !pendingSelection && styles.optionPressed,
+                    ]}>
+                    <View style={styles.optionInner}>
+                      <Text
+                        numberOfLines={3}
+                        style={[
+                          styles.optionText,
+                          isSelected && styles.optionTextSelected,
+                          (showCorrect || showWrong) && styles.optionTextOnAccent,
+                        ]}>
+                        {option}
+                      </Text>
+                      {showCorrect ? (
+                        <TechnicalLabel color={colors.surfaceContainerLowest} style={styles.optionState}>
+                          Doğru
+                        </TechnicalLabel>
+                      ) : showWrong ? (
+                        <TechnicalLabel color={colors.surfaceContainerLowest} style={styles.optionState}>
+                          Seçimin
+                        </TechnicalLabel>
+                      ) : showPending ? (
+                        <TechnicalLabel color={colors.primary} style={styles.optionState}>
+                          Kontrol ediliyor
+                        </TechnicalLabel>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             {feedback ? (
               <View style={[styles.feedbackCard, feedback.isCorrect ? styles.feedbackCorrect : styles.feedbackWrong]}>
@@ -243,18 +282,10 @@ export default function SessionQuizScreen() {
               <Text style={styles.errorText}>{error}</Text>
             ) : (
               <TechnicalLabel color={colors.mutedSoft} style={styles.helperText}>
-                Quiz sonucu bu kelimenin sonraki oturumdaki durumunu belirler.
+                Quiz sonucu bu kelimenin sonraki oturumdaki durumunu belirler. Bir seçeneğe dokunman yeterli.
               </TechnicalLabel>
             )}
           </View>
-
-          <ActionButton
-            label={isSubmitting ? 'Kaydediliyor...' : 'Yanıtı Gönder'}
-            onPress={() => {
-              void handleSubmit();
-            }}
-            style={styles.submitButton}
-          />
         </View>
       </View>
     </SafeAreaView>
@@ -354,18 +385,56 @@ function createStyles(colors: AppPalette) {
       padding: spacing.xl,
       gap: spacing.lg,
     },
-    input: {
-      minHeight: 64,
+    optionsList: {
+      gap: spacing.md,
+    },
+    optionButton: {
+      minHeight: 68,
       borderRadius: radii.lg,
       borderWidth: 1,
       borderColor: colors.border,
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.md,
-      fontFamily: fontFamilies.bodyMedium,
-      fontSize: 20,
-      lineHeight: 28,
-      color: colors.ink,
       backgroundColor: colors.background,
+      justifyContent: 'center',
+      minWidth: 0,
+    },
+    optionButtonSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceContainer,
+    },
+    optionButtonPending: {
+      borderColor: colors.primary,
+      backgroundColor: colors.surfaceContainer,
+    },
+    optionButtonCorrect: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary,
+    },
+    optionButtonWrong: {
+      borderColor: '#C84C4C',
+      backgroundColor: '#C84C4C',
+    },
+    optionInner: {
+      alignItems: 'center',
+      gap: spacing.xs,
+    },
+    optionText: {
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 18,
+      lineHeight: 26,
+      color: colors.ink,
+      textAlign: 'center',
+    },
+    optionTextSelected: {
+      color: colors.primary,
+    },
+    optionTextOnAccent: {
+      color: colors.surfaceContainerLowest,
+    },
+    optionState: {
+      textAlign: 'center',
+      minHeight: 16,
     },
     helperText: {
       textAlign: 'center',
@@ -399,8 +468,8 @@ function createStyles(colors: AppPalette) {
       color: '#C84C4C',
       textAlign: 'center',
     },
-    submitButton: {
-      alignSelf: 'stretch',
+    optionPressed: {
+      transform: [{ scale: 0.995 }],
     },
     pressed: {
       opacity: 0.72,

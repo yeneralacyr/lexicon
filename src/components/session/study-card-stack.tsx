@@ -25,6 +25,7 @@ type StudyCardStackProps = {
   nextItem: SessionQueueItem | null;
   phase: StudyCardPhase;
   countdownRemaining: number | null;
+  countdownProgress: number | null;
   isSubmitting: boolean;
   resetKey: number;
   width: number;
@@ -49,6 +50,7 @@ type BeamSpec = {
 
 export function StudyCardStack({
   activeItem,
+  countdownProgress,
   countdownRemaining,
   height,
   isSubmitting,
@@ -64,7 +66,7 @@ export function StudyCardStack({
   const hasActiveItem = Boolean(activeItem);
   const hasNextItem = Boolean(nextItem);
   const canReveal = phase === 'word_only';
-  const canSwipe = phase === 'word_with_sentence' && !isSubmitting;
+  const canSwipe = (phase === 'meaning_reveal' || phase === 'word_with_sentence') && !isSubmitting;
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const entryScale = useSharedValue(1);
@@ -93,16 +95,20 @@ export function StudyCardStack({
   const panGesture = Gesture.Pan()
     .enabled(hasActiveItem && canSwipe)
     .onUpdate((event) => {
+      if (phase === 'meaning_reveal') {
+        translateX.value = 0;
+        translateY.value = Math.min(0, event.translationY);
+        return;
+      }
+
       translateX.value = event.translationX;
       translateY.value = event.translationY;
     })
     .onEnd((event) => {
-      const decision = resolveDecisionFromDrag(
-        event.translationX,
-        event.translationY,
-        event.velocityX,
-        event.velocityY
-      );
+      const decision =
+        phase === 'meaning_reveal'
+          ? resolveMeaningRevealDecision(event.translationY, event.velocityY)
+          : resolveDecisionFromDrag(event.translationX, event.translationY, event.velocityX, event.velocityY);
 
       if (!decision) {
         translateX.value = withSpring(0, { damping: 20, stiffness: 220 });
@@ -149,6 +155,7 @@ export function StudyCardStack({
   const card = activeItem ? (
     <Animated.View style={styles.activeCardWrap}>
       <StudyCard
+        countdownProgress={countdownProgress}
         countdownRemaining={countdownRemaining}
         height={height}
         item={activeItem}
@@ -226,7 +233,7 @@ export function StudyCardStack({
         {phase === 'word_only'
           ? 'Dokun, anlamı aç.'
           : phase === 'meaning_reveal'
-            ? 'Sayaç bitince cümle açılır.'
+            ? 'Sayaç bitince cümle gelir. Biliyorsan yukarı kaydır.'
             : '\u2190 Sonra tekrar    \u2191 Zaten biliyordum    Ezberledim \u2192'}
       </TechnicalLabel>
     </View>
@@ -472,6 +479,16 @@ function resolveDecisionFromDrag(
   return null;
 }
 
+function resolveMeaningRevealDecision(translationY: number, velocityY: number): SessionDecision | null {
+  'worklet';
+
+  if (-translationY > UP_THRESHOLD || velocityY < -900) {
+    return 'already_knew';
+  }
+
+  return null;
+}
+
 function resolveExitTarget(decision: SessionDecision, width: number, height: number) {
   'worklet';
 
@@ -517,14 +534,14 @@ function getLightConfig(tone: LightTone, isDark: boolean) {
   switch (tone) {
     case 'showAgain':
       return {
-        ambientCore: isDark ? 'rgba(255, 72, 72, 0.42)' : 'rgba(212, 34, 34, 0.34)',
+        ambientCore: isDark ? 'rgba(255, 72, 72, 0.3)' : 'rgba(212, 34, 34, 0.24)',
         ambientSoft: isDark ? 'rgba(255, 72, 72, 0.18)' : 'rgba(212, 34, 34, 0.14)',
-        hotspotCore: isDark ? 'rgba(255, 156, 156, 0.78)' : 'rgba(255, 118, 118, 0.62)',
-        hotspotSoft: isDark ? 'rgba(255, 72, 72, 0.28)' : 'rgba(212, 34, 34, 0.22)',
-        stripCore: isDark ? 'rgba(255, 232, 232, 1)' : 'rgba(255, 214, 214, 0.96)',
-        stripSoft: isDark ? 'rgba(255, 72, 72, 0.66)' : 'rgba(212, 34, 34, 0.46)',
-        beamCore: isDark ? 'rgba(255, 132, 132, 0.72)' : 'rgba(255, 94, 94, 0.58)',
-        beamSoft: isDark ? 'rgba(255, 72, 72, 0.24)' : 'rgba(212, 34, 34, 0.18)',
+        hotspotCore: isDark ? 'rgba(255, 156, 156, 0.6)' : 'rgba(255, 118, 118, 0.46)',
+        hotspotSoft: isDark ? 'rgba(255, 72, 72, 0.24)' : 'rgba(212, 34, 34, 0.18)',
+        stripCore: isDark ? 'rgba(255, 232, 232, 0.54)' : 'rgba(255, 214, 214, 0.48)',
+        stripSoft: isDark ? 'rgba(255, 72, 72, 0.26)' : 'rgba(212, 34, 34, 0.18)',
+        beamCore: isDark ? 'rgba(255, 132, 132, 0.34)' : 'rgba(255, 94, 94, 0.26)',
+        beamSoft: isDark ? 'rgba(255, 72, 72, 0.2)' : 'rgba(212, 34, 34, 0.16)',
         badgeBackground: isDark ? 'rgba(52, 8, 8, 0.68)' : 'rgba(255, 241, 241, 0.92)',
         badgeBorder: isDark ? 'rgba(255, 116, 116, 0.58)' : 'rgba(212, 34, 34, 0.3)',
         label: isDark ? '#FFC0C0' : '#B82626',
@@ -532,13 +549,13 @@ function getLightConfig(tone: LightTone, isDark: boolean) {
       };
     case 'alreadyKnew':
       return {
-        ambientCore: isDark ? 'rgba(152, 255, 229, 0.34)' : 'rgba(17, 168, 144, 0.22)',
-        ambientSoft: isDark ? 'rgba(152, 255, 229, 0.12)' : 'rgba(17, 168, 144, 0.08)',
-        hotspotCore: isDark ? 'rgba(225, 255, 248, 0.66)' : 'rgba(157, 255, 232, 0.4)',
+        ambientCore: isDark ? 'rgba(152, 255, 229, 0.28)' : 'rgba(17, 168, 144, 0.18)',
+        ambientSoft: isDark ? 'rgba(152, 255, 229, 0.14)' : 'rgba(17, 168, 144, 0.1)',
+        hotspotCore: isDark ? 'rgba(225, 255, 248, 0.56)' : 'rgba(157, 255, 232, 0.34)',
         hotspotSoft: isDark ? 'rgba(122, 255, 219, 0.22)' : 'rgba(17, 168, 144, 0.14)',
-        stripCore: isDark ? 'rgba(229, 255, 248, 0.94)' : 'rgba(187, 255, 236, 0.86)',
-        stripSoft: isDark ? 'rgba(122, 255, 219, 0.56)' : 'rgba(17, 168, 144, 0.3)',
-        beamCore: isDark ? 'rgba(199, 255, 243, 0.52)' : 'rgba(137, 247, 219, 0.36)',
+        stripCore: isDark ? 'rgba(229, 255, 248, 0.56)' : 'rgba(187, 255, 236, 0.48)',
+        stripSoft: isDark ? 'rgba(122, 255, 219, 0.28)' : 'rgba(17, 168, 144, 0.16)',
+        beamCore: isDark ? 'rgba(199, 255, 243, 0.34)' : 'rgba(137, 247, 219, 0.24)',
         beamSoft: isDark ? 'rgba(122, 255, 219, 0.16)' : 'rgba(17, 168, 144, 0.1)',
         badgeBackground: isDark ? 'rgba(8, 34, 30, 0.56)' : 'rgba(242, 255, 251, 0.88)',
         badgeBorder: isDark ? 'rgba(152, 255, 229, 0.42)' : 'rgba(17, 168, 144, 0.2)',
@@ -548,14 +565,14 @@ function getLightConfig(tone: LightTone, isDark: boolean) {
     case 'memorized':
     default:
       return {
-        ambientCore: isDark ? 'rgba(98, 248, 168, 0.3)' : 'rgba(24, 160, 92, 0.24)',
-        ambientSoft: isDark ? 'rgba(98, 248, 168, 0.11)' : 'rgba(24, 160, 92, 0.08)',
-        hotspotCore: isDark ? 'rgba(194, 255, 223, 0.6)' : 'rgba(126, 246, 181, 0.42)',
-        hotspotSoft: isDark ? 'rgba(98, 248, 168, 0.18)' : 'rgba(24, 160, 92, 0.12)',
-        stripCore: isDark ? 'rgba(225, 255, 238, 0.92)' : 'rgba(190, 255, 217, 0.84)',
-        stripSoft: isDark ? 'rgba(98, 248, 168, 0.48)' : 'rgba(24, 160, 92, 0.3)',
-        beamCore: isDark ? 'rgba(184, 255, 214, 0.52)' : 'rgba(120, 240, 173, 0.4)',
-        beamSoft: isDark ? 'rgba(98, 248, 168, 0.14)' : 'rgba(24, 160, 92, 0.1)',
+        ambientCore: isDark ? 'rgba(98, 248, 168, 0.24)' : 'rgba(24, 160, 92, 0.18)',
+        ambientSoft: isDark ? 'rgba(98, 248, 168, 0.16)' : 'rgba(24, 160, 92, 0.12)',
+        hotspotCore: isDark ? 'rgba(194, 255, 223, 0.54)' : 'rgba(126, 246, 181, 0.34)',
+        hotspotSoft: isDark ? 'rgba(98, 248, 168, 0.2)' : 'rgba(24, 160, 92, 0.14)',
+        stripCore: isDark ? 'rgba(225, 255, 238, 0.52)' : 'rgba(190, 255, 217, 0.46)',
+        stripSoft: isDark ? 'rgba(98, 248, 168, 0.24)' : 'rgba(24, 160, 92, 0.16)',
+        beamCore: isDark ? 'rgba(184, 255, 214, 0.3)' : 'rgba(120, 240, 173, 0.22)',
+        beamSoft: isDark ? 'rgba(98, 248, 168, 0.18)' : 'rgba(24, 160, 92, 0.12)',
         badgeBackground: isDark ? 'rgba(10, 30, 18, 0.54)' : 'rgba(244, 255, 248, 0.88)',
         badgeBorder: isDark ? 'rgba(98, 248, 168, 0.38)' : 'rgba(24, 160, 92, 0.18)',
         label: isDark ? '#BFFFF0' : '#197A4A',
@@ -582,11 +599,11 @@ function getGradientProps(
     return {
       colors:
         direction === 'left'
-          ? ([config.ambientCore, config.ambientSoft, config.transparent] as const)
-          : ([config.ambientCore, config.ambientSoft, config.transparent] as const),
+          ? ([config.ambientCore, config.ambientSoft, config.ambientSoft, config.transparent] as const)
+          : ([config.ambientCore, config.ambientSoft, config.ambientSoft, config.transparent] as const),
       start: direction === 'left' ? { x: 0, y: 0.5 } : { x: 1, y: 0.5 },
       end: direction === 'left' ? { x: 1, y: 0.5 } : { x: 0, y: 0.5 },
-      locations: [0, 0.28, 1] as const,
+      locations: [0, 0.18, 0.56, 1] as const,
     };
   }
 
@@ -601,10 +618,10 @@ function getGradientProps(
     }
 
     return {
-      colors: [config.hotspotCore, config.hotspotSoft, config.transparent] as const,
+      colors: [config.hotspotCore, config.hotspotSoft, config.hotspotSoft, config.transparent] as const,
       start: direction === 'left' ? { x: 0, y: 0.5 } : { x: 1, y: 0.5 },
       end: direction === 'left' ? { x: 1, y: 0.5 } : { x: 0, y: 0.5 },
-      locations: [0, 0.4, 1] as const,
+      locations: [0, 0.26, 0.58, 1] as const,
     };
   }
 
@@ -619,10 +636,16 @@ function getGradientProps(
     }
 
     return {
-      colors: [config.transparent, config.stripCore, config.stripSoft, config.transparent] as const,
+      colors: [
+        config.transparent,
+        config.stripSoft,
+        config.stripCore,
+        config.stripSoft,
+        config.transparent,
+      ] as const,
       start: { x: 0.5, y: 0 },
       end: { x: 0.5, y: 1 },
-      locations: [0, 0.28, 0.72, 1] as const,
+      locations: [0, 0.18, 0.5, 0.82, 1] as const,
     };
   }
 
@@ -636,10 +659,10 @@ function getGradientProps(
   }
 
   return {
-    colors: [config.beamCore, config.beamSoft, config.transparent] as const,
+    colors: [config.beamCore, config.beamSoft, config.beamSoft, config.transparent] as const,
     start: direction === 'left' ? { x: 0, y: 0.5 } : { x: 1, y: 0.5 },
     end: direction === 'left' ? { x: 1, y: 0.5 } : { x: 0, y: 0.5 },
-    locations: [0, 0.32, 1] as const,
+    locations: [0, 0.24, 0.6, 1] as const,
   };
 }
 
@@ -653,18 +676,18 @@ function getAmbientPlacement(direction: LightDirection): ViewStyle {
     };
   }
 
-    return direction === 'left'
+  return direction === 'left'
     ? {
-        left: 0,
+        left: '-2%',
         top: 0,
         bottom: 0,
-        width: '96%',
+        width: '102%',
       }
     : {
-        right: 0,
+        right: '-2%',
         top: 0,
         bottom: 0,
-        width: '96%',
+        width: '102%',
       };
 }
 
@@ -678,17 +701,17 @@ function getHotspotPlacement(direction: LightDirection): ViewStyle {
     };
   }
 
-    return direction === 'left'
+  return direction === 'left'
     ? {
-        left: '-12%',
-        top: '8%',
-        width: '52%',
+        left: '2%',
+        top: '6%',
+        width: '58%',
         height: '84%',
       }
     : {
-        right: '-12%',
-        top: '8%',
-        width: '52%',
+        right: '2%',
+        top: '6%',
+        width: '58%',
         height: '84%',
       };
 }
@@ -703,18 +726,18 @@ function getStripPlacement(direction: LightDirection): ViewStyle {
     };
   }
 
-  return direction === 'left'
+    return direction === 'left'
     ? {
         left: 0,
         top: '10%',
         bottom: '10%',
-        width: 10,
+        width: 6,
       }
     : {
         right: 0,
         top: '10%',
         bottom: '10%',
-        width: 10,
+        width: 6,
       };
 }
 
@@ -784,38 +807,38 @@ function getBeamSpecs(direction: LightDirection): BeamSpec[] {
       {
         key: 'left-primary',
         slotStyle: {
-          left: '-14%',
-          top: '12%',
-          width: '104%',
-          height: 58,
-          transform: [{ rotate: '-16deg' }],
+          left: '2%',
+          top: '14%',
+          width: '84%',
+          height: 74,
+          transform: [{ rotate: '-7deg' }],
         },
-        opacity: 0.42,
-        travel: 28,
+        opacity: 0.22,
+        travel: 14,
       },
       {
         key: 'left-secondary',
         slotStyle: {
-          left: '-10%',
+          left: '6%',
           top: '42%',
-          width: '96%',
-          height: 46,
-          transform: [{ rotate: '4deg' }],
+          width: '78%',
+          height: 60,
+          transform: [{ rotate: '1deg' }],
         },
-        opacity: 0.3,
-        travel: 22,
+        opacity: 0.16,
+        travel: 12,
       },
       {
         key: 'left-tertiary',
         slotStyle: {
-          left: '-6%',
+          left: '10%',
           top: '64%',
-          width: '86%',
-          height: 34,
-          transform: [{ rotate: '18deg' }],
+          width: '70%',
+          height: 46,
+          transform: [{ rotate: '6deg' }],
         },
-        opacity: 0.22,
-        travel: 16,
+        opacity: 0.1,
+        travel: 10,
       },
     ];
   }
@@ -824,38 +847,38 @@ function getBeamSpecs(direction: LightDirection): BeamSpec[] {
     {
       key: 'right-primary',
       slotStyle: {
-        right: '-14%',
-        top: '12%',
-        width: '104%',
-        height: 58,
-        transform: [{ rotate: '16deg' }],
+        right: '2%',
+        top: '14%',
+        width: '84%',
+        height: 74,
+        transform: [{ rotate: '7deg' }],
       },
-      opacity: 0.42,
-      travel: 28,
+      opacity: 0.22,
+      travel: 14,
     },
     {
       key: 'right-secondary',
       slotStyle: {
-        right: '-10%',
+        right: '6%',
         top: '42%',
-        width: '96%',
-        height: 46,
-        transform: [{ rotate: '-4deg' }],
+        width: '78%',
+        height: 60,
+        transform: [{ rotate: '-1deg' }],
       },
-      opacity: 0.3,
-      travel: 22,
+      opacity: 0.16,
+      travel: 12,
     },
     {
       key: 'right-tertiary',
       slotStyle: {
-        right: '-6%',
+        right: '10%',
         top: '64%',
-        width: '86%',
-        height: 34,
-        transform: [{ rotate: '-18deg' }],
+        width: '70%',
+        height: 46,
+        transform: [{ rotate: '-6deg' }],
       },
-      opacity: 0.22,
-      travel: 16,
+      opacity: 0.1,
+      travel: 10,
     },
   ];
 }

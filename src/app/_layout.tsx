@@ -14,7 +14,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { lightPalette, spacing, type ThemeMode } from '@/constants/theme';
+import { AdsProvider } from '@/ads/provider';
+import { darkPalette, spacing, type ThemeMode } from '@/constants/theme';
 import { initializeDatabase } from '@/db';
 import { getSettings } from '@/modules/progress/progress.service';
 import { AppThemeProvider, useAppTheme } from '@/theme/app-theme-provider';
@@ -34,15 +35,15 @@ export default function RootLayout() {
   });
   const [dbReady, setDbReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [themeMode, setThemeMode] = useState<ThemeMode>('system');
-  const styles = useMemo(() => createStyles(lightPalette), []);
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark');
+  const styles = useMemo(() => createStyles(darkPalette), []);
 
   useEffect(() => {
     let active = true;
 
     async function bootstrap() {
       try {
-        await SystemUI.setBackgroundColorAsync(lightPalette.background);
+        await SystemUI.setBackgroundColorAsync(darkPalette.background);
 
         if (!isWeb) {
           await initializeDatabase();
@@ -81,7 +82,7 @@ export default function RootLayout() {
   if (fontsError || error) {
     return (
       <View style={styles.errorScreen}>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Text style={styles.errorEyebrow}>BAŞLATMA HATASI</Text>
         <Text style={styles.errorTitle}>Veritabanı kurulumu başarısız.</Text>
         <Text style={styles.errorText}>{error ?? fontsError?.message}</Text>
@@ -96,7 +97,7 @@ export default function RootLayout() {
   if (isWeb) {
     return (
       <View style={styles.errorScreen}>
-        <StatusBar style="dark" />
+        <StatusBar style="light" />
         <Text style={styles.errorEyebrow}>SADECE YEREL DERLEME</Text>
         <Text style={styles.errorTitle}>Kalıcı depolama iOS veya Android gerektirir.</Text>
         <Text style={styles.errorText}>
@@ -109,7 +110,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <AppThemeProvider initialThemeMode={themeMode}>
-        <RootNavigator />
+        <AdsProvider>
+          <RootNavigator />
+        </AdsProvider>
       </AppThemeProvider>
     </GestureHandlerRootView>
   );
@@ -117,7 +120,6 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { colors, isDark, navigationTheme } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.background);
@@ -126,20 +128,20 @@ function RootNavigator() {
   return (
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="onboarding/index" />
-          <Stack.Screen name="session/[sessionId]" />
-          <Stack.Screen name="session/quiz/[sessionId]" />
-          <Stack.Screen name="session/complete" />
-          <Stack.Screen name="word/[wordId]" />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="onboarding/index" />
+        <Stack.Screen name="session/[sessionId]" />
+        <Stack.Screen name="session/quiz/[sessionId]" />
+        <Stack.Screen name="session/complete" />
+        <Stack.Screen name="word/[wordId]" />
       </Stack>
     </ThemeProvider>
   );
 }
 
-function createStyles(colors: typeof lightPalette) {
+function createStyles(colors: typeof darkPalette) {
   return StyleSheet.create({
     root: {
       flex: 1,

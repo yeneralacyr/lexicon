@@ -9,9 +9,10 @@ type SettingsState = StudySettings & {
 export const useSettingsStore = create<SettingsState>((set) => ({
   dailyNewLimit: 10,
   dailyReviewLimit: 20,
+  meaningRevealSeconds: 5,
   sessionGoalMinutes: 5,
   onboardingCompleted: false,
   notificationsEnabled: false,
-  themeMode: 'system',
+  themeMode: 'dark',
   hydrate: (settings) => set(settings),
 }));

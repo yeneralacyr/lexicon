@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { CountdownRing } from '@/components/session/countdown-ring';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, radii, spacing, type AppPalette } from '@/constants/theme';
@@ -21,6 +22,7 @@ type StudyCardProps = {
   item: SessionQueueItem;
   phase: StudyCardPhase;
   countdownRemaining: number | null;
+  countdownProgress: number | null;
   shellAnimatedStyle?: any;
   width: number;
   height: number;
@@ -30,6 +32,7 @@ const FLIP_DURATION = 260;
 
 export function StudyCard({
   countdownRemaining,
+  countdownProgress,
   height,
   item,
   phase,
@@ -99,9 +102,9 @@ export function StudyCard({
       <Animated.View style={[styles.face, styles.backFace, backAnimatedStyle]}>
         <View style={styles.topRow}>
           <TechnicalLabel color={colors.muted}>Türkçe anlam</TechnicalLabel>
-          <View style={styles.timerPill}>
-            <Text style={styles.timerText}>{String(countdownRemaining ?? 0).padStart(2, '0')}s</Text>
-          </View>
+          {countdownRemaining !== null && countdownProgress !== null ? (
+            <CountdownRing progress={countdownProgress} secondsRemaining={countdownRemaining} />
+          ) : null}
         </View>
 
         <View style={styles.backCenter}>
@@ -111,7 +114,7 @@ export function StudyCard({
         </View>
 
         <View style={styles.bottomRow}>
-          <TechnicalLabel color={colors.mutedSoft}>5 saniye sonra kelime ve cümle görünür.</TechnicalLabel>
+          <TechnicalLabel color={colors.mutedSoft}>Sayaç bitince cümle gelir. Biliyorsan yukarı kaydır.</TechnicalLabel>
         </View>
       </Animated.View>
     </Animated.View>
@@ -181,23 +184,6 @@ function createStyles(colors: AppPalette) {
       alignItems: 'center',
       gap: spacing.sm,
       minWidth: 0,
-    },
-    timerPill: {
-      minWidth: 54,
-      minHeight: 34,
-      borderRadius: radii.pill,
-      paddingHorizontal: spacing.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primary,
-    },
-    timerText: {
-      fontFamily: fontFamilies.bodyBold,
-      fontSize: 13,
-      lineHeight: 16,
-      letterSpacing: 1.4,
-      color: colors.surfaceContainerLowest,
-      textTransform: 'uppercase',
     },
     backCenter: {
       flex: 1,

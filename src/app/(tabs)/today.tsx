@@ -70,6 +70,7 @@ export default function TodayScreen() {
   const activeSessionCompletedItems = snapshot?.activeSessionCompletedItems ?? 0;
   const activeSessionTotalItems = snapshot?.activeSessionTotalItems ?? 0;
   const activeSessionRemaining = Math.max(0, activeSessionTotalItems - activeSessionCompletedItems);
+  const activeSessionRemainingMinutes = Math.max(1, Math.ceil(activeSessionRemaining / 4));
   const queueEmpty = !hasActiveSession && recommendedCount === 0;
   const progressPercent = hasActiveSession
     ? activeSessionTotalItems > 0
@@ -118,13 +119,17 @@ export default function TodayScreen() {
 
           <View style={styles.heroCard}>
             <TechnicalLabel color={colors.muted} style={styles.heroTag}>
-              Günlük döngü
+              {activeSessionPhase === 'quiz' ? 'Final quiz' : hasActiveSession ? 'Aktif oturum' : 'Bugünkü sıra'}
             </TechnicalLabel>
             <Text adjustsFontSizeToFit minimumFontScale={0.68} numberOfLines={1} style={styles.heroNumber}>
               {hasActiveSession ? activeSessionRemaining : recommendedCount}
             </Text>
             <TechnicalLabel style={styles.heroCaption}>
-              {activeSessionPhase === 'quiz' ? 'Kalan quiz kelimeleri' : hasActiveSession ? 'Kalan kartlar' : "Bugünün ana turu"}
+              {activeSessionPhase === 'quiz'
+                ? 'Quizde kalan kelime'
+                : hasActiveSession
+                  ? 'Bu oturumda kalan kart'
+                  : 'Bugün çalışılacak toplam kart'}
             </TechnicalLabel>
 
             <View style={styles.heroMeta}>
@@ -134,13 +139,13 @@ export default function TodayScreen() {
                     ? `${activeSessionCompletedItems} doğrulandı`
                     : hasActiveSession
                       ? `${activeSessionCompletedItems} tamamlandı`
-                      : `${plannedNewCount} yeni kart`}
+                      : `${snapshot?.dueToday ?? 0} tekrar • ${plannedNewCount} yeni`}
                 </Text>
                 <Text numberOfLines={1} style={styles.heroMetaText}>
                   {activeSessionPhase === 'quiz'
-                    ? `~${Math.max(1, Math.ceil(activeSessionRemaining / 4))} dk`
+                    ? `~${activeSessionRemainingMinutes} dk`
                     : hasActiveSession
-                    ? `~${Math.max(1, snapshot?.estimatedMinutes ?? 0)} dk kaldı`
+                    ? `~${activeSessionRemainingMinutes} dk kaldı`
                     : `~${snapshot?.estimatedMinutes ?? 0} dk`}
                 </Text>
               </View>
@@ -159,23 +164,31 @@ export default function TodayScreen() {
               }}
             />
 
-            <View style={styles.modeRow}>
-              <ModeLink
-                disabled={!hasActiveSession && (snapshot?.dueToday ?? 0) === 0}
-                label="Sadece tekrar"
-                onPress={() => {
-                  void handleStartSession('review_only');
-                }}
-              />
-              <ModeLink
-                disabled={!hasActiveSession && (snapshot?.newWords ?? 0) === 0}
-                label="Sadece yeni"
-                onPress={() => {
-                  void handleStartSession('new_only');
-                }}
-              />
-            </View>
-            {queueEmpty ? (
+            {!hasActiveSession ? (
+              <View style={styles.modeRow}>
+                <ModeLink
+                  disabled={(snapshot?.dueToday ?? 0) === 0}
+                  label="Sadece tekrar"
+                  onPress={() => {
+                    void handleStartSession('review_only');
+                  }}
+                />
+                <ModeLink
+                  disabled={(snapshot?.newWords ?? 0) === 0}
+                  label="Sadece yeni"
+                  onPress={() => {
+                    void handleStartSession('new_only');
+                  }}
+                />
+              </View>
+            ) : null}
+            {hasActiveSession ? (
+              <TechnicalLabel color={colors.mutedSoft} style={styles.queueNote}>
+                {activeSessionPhase === 'quiz'
+                  ? 'Önce final quiz tamamlanmalı. Yeni oturum modu bundan sonra seçilebilir.'
+                  : 'Aktif oturum açıkken mod değişmez. Önce kaldığın yerden devam et.'}
+              </TechnicalLabel>
+            ) : queueEmpty ? (
               <TechnicalLabel color={colors.muted} style={styles.queueNote}>
                 Tekrar kuyruğun şu an boş. Yarın yeni kartlar hazırlandığında kaldığın yerden devam edeceksin.
               </TechnicalLabel>
@@ -195,13 +208,19 @@ export default function TodayScreen() {
                 <MaterialIcons color={colors.primary} name="bolt" size={14} />
                 <Text numberOfLines={1} style={styles.metricValue}>{snapshot?.streakDays ?? 0} gün</Text>
               </View>
+              <TechnicalLabel color={colors.mutedSoft} style={styles.metricHint}>
+                Üst üste aktif gün
+              </TechnicalLabel>
             </View>
             <View style={styles.metricCell}>
               <TechnicalLabel color={colors.muted}>Öğrenilen</TechnicalLabel>
               <View style={styles.metricValueRow}>
                 <MaterialIcons color={colors.primary} name="verified" size={14} />
-                <Text numberOfLines={1} style={styles.metricValue}>{snapshot?.studiedWords ?? 0} kelime</Text>
+                <Text numberOfLines={1} style={styles.metricValue}>{snapshot?.masteredWords ?? 0} kelime</Text>
               </View>
+              <TechnicalLabel color={colors.mutedSoft} style={styles.metricHint}>
+                Kalıcı duruma geçen toplam
+              </TechnicalLabel>
             </View>
           </View>
 
@@ -387,6 +406,11 @@ function createStyles(colors: AppPalette) {
       lineHeight: 40,
       letterSpacing: -1,
       color: colors.ink,
+    },
+    metricHint: {
+      textAlign: 'center',
+      minHeight: 28,
+      maxWidth: 150,
     },
     footerNote: {
       marginTop: spacing.xxl,

@@ -39,18 +39,27 @@ function mapWordListItem(row: {
 function buildLibraryFilterQuery(filter: LibraryQuery['filter']) {
   switch (filter) {
     case 'favorites':
-      return { whereClause: 'WHERE COALESCE(p.is_favorite, 0) = 1', params: [] as Array<string | number> };
-    case 'new':
-      return { whereClause: "WHERE p.word_id IS NULL OR p.status = 'new'", params: [] as Array<string | number> };
+      return {
+        whereClause:
+          "WHERE COALESCE(p.is_favorite, 0) = 1 AND p.word_id IS NOT NULL AND p.status IN ('learning', 'review', 'mastered')",
+        params: [] as (string | number)[],
+      };
+    case 'learned':
+      return {
+        whereClause: "WHERE p.word_id IS NOT NULL AND p.status IN ('learning', 'review', 'mastered')",
+        params: [] as (string | number)[],
+      };
     case 'learning':
-      return { whereClause: "WHERE p.status = 'learning'", params: [] as Array<string | number> };
+      return { whereClause: "WHERE p.status = 'learning'", params: [] as (string | number)[] };
     case 'review':
-      return { whereClause: "WHERE p.status = 'review'", params: [] as Array<string | number> };
+      return { whereClause: "WHERE p.status = 'review'", params: [] as (string | number)[] };
     case 'mastered':
-      return { whereClause: "WHERE p.status = 'mastered'", params: [] as Array<string | number> };
-    case 'all':
+      return { whereClause: "WHERE p.status = 'mastered'", params: [] as (string | number)[] };
     default:
-      return { whereClause: '', params: [] as Array<string | number> };
+      return {
+        whereClause: "WHERE p.word_id IS NOT NULL AND p.status IN ('learning', 'review', 'mastered')",
+        params: [] as (string | number)[],
+      };
   }
 }
 

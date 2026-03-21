@@ -9,8 +9,8 @@ type RawAdMobConfig = {
   isProduction?: boolean;
   androidAppId?: string;
   iosAppId?: string;
-  interstitialSessionCompleteAndroid?: string;
-  interstitialSessionCompleteIos?: string;
+  rewardedExtraNewWordsAndroid?: string;
+  rewardedExtraNewWordsIos?: string;
   testDeviceIds?: string[];
 };
 
@@ -34,24 +34,19 @@ export const admobConfig: AdMobRuntimeConfig = {
   iosAppId: raw.iosAppId ?? '',
   testDeviceIds: raw.testDeviceIds ?? [],
   units: {
-    sessionCompleteInterstitial: {
-      android: raw.interstitialSessionCompleteAndroid || null,
-      ios: raw.interstitialSessionCompleteIos || null,
+    extraNewWordsRewarded: {
+      android: raw.rewardedExtraNewWordsAndroid || null,
+      ios: raw.rewardedExtraNewWordsIos || null,
     },
-  },
-  thresholds: {
-    minimumUniqueWords: 8,
-    minimumCompletedSessions: 3,
-    cooldownMinutes: 20,
   },
 };
 
-export function getPlacementUnitId(placement: 'session_complete_interstitial') {
-  if (placement !== 'session_complete_interstitial') {
+export function getPlacementUnitId(placement: 'extra_new_words_rewarded') {
+  if (placement !== 'extra_new_words_rewarded') {
     return null;
   }
 
   return Platform.OS === 'ios'
-    ? admobConfig.units.sessionCompleteInterstitial.ios
-    : admobConfig.units.sessionCompleteInterstitial.android;
+    ? admobConfig.units.extraNewWordsRewarded.ios
+    : admobConfig.units.extraNewWordsRewarded.android;
 }

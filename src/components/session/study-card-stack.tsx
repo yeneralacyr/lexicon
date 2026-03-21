@@ -25,7 +25,7 @@ type StudyCardStackProps = {
   nextItem: SessionQueueItem | null;
   phase: StudyCardPhase;
   countdownRemaining: number | null;
-  countdownProgress: number | null;
+  countdownProgress: SharedValue<number>;
   isSubmitting: boolean;
   resetKey: number;
   width: number;

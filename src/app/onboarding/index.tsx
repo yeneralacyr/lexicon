@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,10 +8,8 @@ import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
 import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, spacing, type AppPalette } from '@/constants/theme';
-import { getSettings, updateSettings } from '@/modules/progress/progress.service';
+import { updateSettings } from '@/modules/progress/progress.service';
 import { useAppTheme } from '@/theme/app-theme-provider';
-
-const options = [5, 10, 15];
 
 const tutorialSlides = [
   {
@@ -39,8 +37,8 @@ const tutorialSlides = [
     id: 'setup',
     eyebrow: 'Adım 04 — Quiz ve tempo',
     title: 'Tur bitince çoktan seçmeli quiz gelir.',
-    body: 'Oturum sonunda İngilizce kelimeler için doğru Türkçe anlamı seçersin. Son doğrulama burada yapılır. Sonra günlük hedefini seçip başlarsın.',
-    cards: ['Final kontrol: çoktan seçmeli quiz', 'Doğruysa kelime güçlenir', 'Şimdi günlük hedefini seç'],
+    body: 'Oturum sonunda İngilizce kelimeler için doğru Türkçe anlamı seçersin. Son doğrulama burada yapılır. Her gün ücretsiz 7 yeni kelime açılır; tekrar kartların her zaman ücretsiz devam eder.',
+    cards: ['Final kontrol: çoktan seçmeli quiz', 'Doğruysa kelime güçlenir', 'Her gün ücretsiz 7 yeni kelime'],
   },
 ] as const;
 
@@ -49,26 +47,8 @@ export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [selected, setSelected] = useState(10);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-
-    async function load() {
-      const settings = await getSettings();
-      if (active) {
-        setSelected(settings.dailyNewLimit);
-      }
-    }
-
-    void load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   function goToStep(nextStep: number) {
     const bounded = Math.max(0, Math.min(tutorialSlides.length - 1, nextStep));
@@ -80,7 +60,7 @@ export default function OnboardingScreen() {
     setSaving(true);
     try {
       await updateSettings({
-        dailyNewLimit: selected,
+        dailyNewLimit: 7,
         onboardingCompleted: true,
       });
       router.replace('/today');
@@ -139,33 +119,20 @@ export default function OnboardingScreen() {
                   </View>
                 ) : (
                   <View style={styles.setupSection}>
-                    <View style={styles.options}>
-                      {options.map((value) => {
-                        const active = value === selected;
-
-                        return (
-                          <Pressable
-                            key={value}
-                            onPress={() => setSelected(value)}
-                            style={[styles.optionCard, active && styles.optionCardActive]}>
-                            <View style={styles.optionCopy}>
-                            <Text style={[styles.optionNumber, active && styles.optionNumberActive]}>{value}</Text>
-                              <TechnicalLabel
-                                color={active ? `rgba(255,255,255,0.74)` : colors.muted}
-                                style={styles.optionLabel}>
-                                Kelime / gün
-                              </TechnicalLabel>
-                            </View>
-                            <View style={[styles.optionCircle, active && styles.optionCircleActive]}>
-                              {active ? <View style={styles.optionCircleDot} /> : null}
-                            </View>
-                          </Pressable>
-                        );
-                      })}
+                    <View style={[styles.optionCard, styles.optionCardActive]}>
+                      <View style={styles.optionCopy}>
+                        <Text style={[styles.optionNumber, styles.optionNumberActive]}>7</Text>
+                        <TechnicalLabel color="rgba(255,255,255,0.74)" style={styles.optionLabel}>
+                          Ücretsiz yeni kelime / gün
+                        </TechnicalLabel>
+                      </View>
+                      <View style={[styles.optionCircle, styles.optionCircleActive]}>
+                        <View style={styles.optionCircleDot} />
+                      </View>
                     </View>
 
                     <TechnicalLabel color={colors.mutedSoft} style={styles.setupHint}>
-                      Hedefini daha sonra Ayarlar sekmesinden değiştirebilirsin. Verileri sıfırlarsan bu kısa turu yeniden görebilirsin.
+                      Yeni kelime kotası günlük olarak 7 kelimeye sabitlendi. Verileri sıfırlarsan bu kısa turu yeniden görebilirsin.
                     </TechnicalLabel>
                   </View>
                 )}

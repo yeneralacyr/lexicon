@@ -1,5 +1,5 @@
 export const APP_DB_NAME = 'lexicon.db';
-export const APP_DB_VERSION = 3;
+export const APP_DB_VERSION = 4;
 export const WORDS_SEED_VERSION = 1;
 
 const schemaV1Sql = `
@@ -117,6 +117,14 @@ CREATE INDEX IF NOT EXISTS idx_session_quiz_items_session_order
   ON session_quiz_items(session_id, order_index);
 `;
 
+const schemaV4Sql = `
+CREATE TABLE IF NOT EXISTS daily_unlocks (
+  date TEXT PRIMARY KEY,
+  free_new_unlocked_count INTEGER NOT NULL DEFAULT 0,
+  rewarded_new_unlocked_count INTEGER NOT NULL DEFAULT 0
+);
+`;
+
 export const migrationDefinitions = [
   {
     version: 1,
@@ -129,5 +137,9 @@ export const migrationDefinitions = [
   {
     version: 3,
     statements: [schemaV3Sql],
+  },
+  {
+    version: 4,
+    statements: [schemaV4Sql],
   },
 ] as const;

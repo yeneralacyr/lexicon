@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import { CountdownRing } from '@/components/session/countdown-ring';
@@ -22,7 +23,7 @@ type StudyCardProps = {
   item: SessionQueueItem;
   phase: StudyCardPhase;
   countdownRemaining: number | null;
-  countdownProgress: number | null;
+  countdownProgress: SharedValue<number>;
   shellAnimatedStyle?: any;
   width: number;
   height: number;
@@ -43,6 +44,7 @@ export function StudyCard({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const flipProgress = useSharedValue(phase === 'meaning_reveal' ? 1 : 0);
   const exampleSentence = item.sentence ?? item.sentences[0] ?? null;
+  const englishLineLimit = item.english.trim().includes(' ') ? 2 : 1;
 
   useEffect(() => {
     flipProgress.value = withTiming(phase === 'meaning_reveal' ? 1 : 0, { duration: FLIP_DURATION });
@@ -76,7 +78,7 @@ export function StudyCard({
         </View>
 
         <View style={styles.frontCenter}>
-          <ResponsiveDisplayText numberOfLines={3} style={styles.word} variant="word">
+          <ResponsiveDisplayText numberOfLines={englishLineLimit} style={styles.word} variant="word">
             {item.english}
           </ResponsiveDisplayText>
 
@@ -102,7 +104,7 @@ export function StudyCard({
       <Animated.View style={[styles.face, styles.backFace, backAnimatedStyle]}>
         <View style={styles.topRow}>
           <TechnicalLabel color={colors.muted}>Türkçe anlam</TechnicalLabel>
-          {countdownRemaining !== null && countdownProgress !== null ? (
+          {countdownRemaining !== null ? (
             <CountdownRing progress={countdownProgress} secondsRemaining={countdownRemaining} />
           ) : null}
         </View>

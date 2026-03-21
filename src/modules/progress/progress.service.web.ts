@@ -1,4 +1,4 @@
-import type { AppOverview, ProgressExportPayload, StudySettings } from '@/types/db';
+import type { AppOverview, DailyUnlocks, ProgressExportPayload, StudySettings } from '@/types/db';
 import type { Rating, WordProgressRecord } from '@/types/progress';
 import type { WordCandidate } from '@/types/word';
 
@@ -19,6 +19,14 @@ export async function updateSettings(_: Partial<StudySettings>): Promise<StudySe
 }
 
 export async function getDueWordCandidates(_: number): Promise<WordCandidate[]> {
+  unsupported();
+}
+
+export async function getTodayDailyUnlocks(): Promise<DailyUnlocks> {
+  unsupported();
+}
+
+export async function grantRewardedNewWords(_: number): Promise<DailyUnlocks> {
   unsupported();
 }
 

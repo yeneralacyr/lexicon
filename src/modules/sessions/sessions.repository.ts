@@ -9,6 +9,7 @@ import type {
   SessionPhase,
   SessionQuizDetail,
   SessionSummary,
+  SessionType,
 } from '@/types/session';
 import { nowIso, plusDaysIso, todayIso } from '@/utils/dates';
 
@@ -114,8 +115,17 @@ export async function createSessionItemsRepository(items: CreateSessionItemInput
   await createSessionItemsOnDatabase(db, items);
 }
 
-export async function getActiveSessionRepository(): Promise<ActiveSession | null> {
+type ActiveSessionScope = 'all' | 'study' | 'library_review';
+
+async function getActiveSessionByScope(scope: ActiveSessionScope): Promise<ActiveSession | null> {
   const db = await getDatabase();
+  const [whereClause, params] =
+    scope === 'library_review'
+      ? ["status = 'active' AND session_type = 'library_review'", [] as (string | number)[]]
+      : scope === 'study'
+        ? ["status IN ('active', 'quiz') AND session_type != 'library_review'", [] as (string | number)[]]
+        : ["status IN ('active', 'quiz')", [] as (string | number)[]];
+
   const session = await db.getFirstAsync<{
     id: string;
     status: string;
@@ -137,10 +147,11 @@ export async function getActiveSessionRepository(): Promise<ActiveSession | null
         new_items,
         review_items
       FROM sessions
-      WHERE status IN ('active', 'quiz')
+      WHERE ${whereClause}
       ORDER BY started_at DESC
       LIMIT 1
-    `
+    `,
+    ...params
   );
 
   if (!session) {
@@ -150,13 +161,25 @@ export async function getActiveSessionRepository(): Promise<ActiveSession | null
   return {
     id: session.id,
     phase: resolveSessionPhase(session.status),
-    sessionType: session.session_type,
+    sessionType: session.session_type as SessionType,
     startedAt: session.started_at,
     totalItems: session.total_items,
     completedItems: session.completed_items,
     newItems: session.new_items,
     reviewItems: session.review_items,
   };
+}
+
+export async function getActiveSessionRepository(): Promise<ActiveSession | null> {
+  return getActiveSessionByScope('all');
+}
+
+export async function getActiveStudySessionRepository(): Promise<ActiveSession | null> {
+  return getActiveSessionByScope('study');
+}
+
+export async function getActiveLibraryReviewSessionRepository(): Promise<ActiveSession | null> {
+  return getActiveSessionByScope('library_review');
 }
 
 export async function resumeActiveSessionRepository() {
@@ -255,7 +278,7 @@ export async function getSessionDetailRepository(sessionId: string): Promise<Ses
     id: session.id,
     status: session.status,
     phase: resolveSessionPhase(session.status),
-    sessionType: session.session_type,
+    sessionType: session.session_type as SessionType,
     startedAt: session.started_at,
     endedAt: session.ended_at,
     totalItems: session.total_items,

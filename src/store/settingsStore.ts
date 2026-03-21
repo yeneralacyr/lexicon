@@ -7,7 +7,7 @@ type SettingsState = StudySettings & {
 };
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  dailyNewLimit: 10,
+  dailyNewLimit: 7,
   dailyReviewLimit: 20,
   meaningRevealSeconds: 5,
   sessionGoalMinutes: 5,

@@ -39,6 +39,8 @@ export type LibraryPage = {
   totalCount: number;
   totalWords: number;
   learnedCount: number;
+  learningCount: number;
+  reviewCount: number;
   nextOffset: number | null;
 };
 

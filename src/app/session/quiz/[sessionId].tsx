@@ -15,7 +15,6 @@ import type { SessionQuizDetail } from '@/types/session';
 
 type FeedbackState = {
   isCorrect: boolean;
-  correctMeaning: string;
   selectedOption: string;
 };
 
@@ -34,6 +33,8 @@ export default function SessionQuizScreen() {
   const [error, setError] = useState<string | null>(null);
   const [answerStartedAt, setAnswerStartedAt] = useState(() => Date.now());
   const isFinalizingRef = useRef(false);
+  const currentItem = quiz?.items[currentIndex] ?? null;
+  const currentWordId = currentItem?.wordId ?? null;
 
   useEffect(() => {
     let active = true;
@@ -76,7 +77,7 @@ export default function SessionQuizScreen() {
   }, [router, sessionId, setActiveSessionId]);
 
   useEffect(() => {
-    if (!quiz?.items[currentIndex]) {
+    if (!currentWordId) {
       return;
     }
 
@@ -84,9 +85,7 @@ export default function SessionQuizScreen() {
     setFeedback(null);
     setError(null);
     setAnswerStartedAt(Date.now());
-  }, [currentIndex, quiz?.items]);
-
-  const currentItem = quiz?.items[currentIndex] ?? null;
+  }, [currentIndex, currentWordId]);
   const progressValue = quiz ? `${Math.min(currentIndex + 1, quiz.totalItems)} / ${quiz.totalItems}` : '0 / 0';
   const progressWidth = quiz && quiz.totalItems > 0 ? ((currentIndex + 1) / quiz.totalItems) * 100 : 0;
 
@@ -151,13 +150,12 @@ export default function SessionQuizScreen() {
 
       setFeedback({
         isCorrect: result.isCorrect,
-        correctMeaning: currentItem.turkish,
         selectedOption,
       });
 
-      const nextQuiz = await reloadQuiz();
+      await delay(1500);
 
-      await delay(1100);
+      const nextQuiz = await reloadQuiz();
 
       if (!nextQuiz) {
         return;
@@ -250,15 +248,7 @@ export default function SessionQuizScreen() {
                         ]}>
                         {option}
                       </Text>
-                      {showCorrect ? (
-                        <TechnicalLabel color={colors.surfaceContainerLowest} style={styles.optionState}>
-                          Doğru
-                        </TechnicalLabel>
-                      ) : showWrong ? (
-                        <TechnicalLabel color={colors.surfaceContainerLowest} style={styles.optionState}>
-                          Seçimin
-                        </TechnicalLabel>
-                      ) : showPending ? (
+                      {showPending ? (
                         <TechnicalLabel color={colors.primary} style={styles.optionState}>
                           Kontrol ediliyor
                         </TechnicalLabel>
@@ -269,22 +259,13 @@ export default function SessionQuizScreen() {
               })}
             </View>
 
-            {feedback ? (
-              <View style={[styles.feedbackCard, feedback.isCorrect ? styles.feedbackCorrect : styles.feedbackWrong]}>
-                <TechnicalLabel color={feedback.isCorrect ? colors.primary : colors.surfaceContainerLowest}>
-                  {feedback.isCorrect ? 'Doğru' : 'Yanlış'}
-                </TechnicalLabel>
-                <Text style={[styles.feedbackText, !feedback.isCorrect && styles.feedbackTextOnDark]}>
-                  {feedback.isCorrect ? 'Bu kelime öğrenildi olarak sayılacak.' : `Doğru cevap: ${feedback.correctMeaning}`}
-                </Text>
-              </View>
-            ) : error ? (
+            {error ? (
               <Text style={styles.errorText}>{error}</Text>
-            ) : (
+            ) : !feedback ? (
               <TechnicalLabel color={colors.mutedSoft} style={styles.helperText}>
                 Quiz sonucu bu kelimenin sonraki oturumdaki durumunu belirler. Bir seçeneğe dokunman yeterli.
               </TechnicalLabel>
-            )}
+            ) : null}
           </View>
         </View>
       </View>
@@ -438,28 +419,6 @@ function createStyles(colors: AppPalette) {
     },
     helperText: {
       textAlign: 'center',
-    },
-    feedbackCard: {
-      gap: spacing.sm,
-      padding: spacing.lg,
-      borderRadius: radii.lg,
-    },
-    feedbackCorrect: {
-      backgroundColor: colors.surfaceContainer,
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    feedbackWrong: {
-      backgroundColor: colors.primary,
-    },
-    feedbackText: {
-      fontFamily: fontFamilies.bodyMedium,
-      fontSize: 15,
-      lineHeight: 22,
-      color: colors.ink,
-    },
-    feedbackTextOnDark: {
-      color: colors.surfaceContainerLowest,
     },
     errorText: {
       fontFamily: fontFamilies.bodyMedium,

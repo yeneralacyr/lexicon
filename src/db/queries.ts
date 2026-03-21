@@ -6,7 +6,7 @@ import type { AppOverview, DashboardSnapshot, StudySettings } from '@/types/db';
 import { todayIso } from '@/utils/dates';
 
 const defaultSettings = {
-  dailyNewLimit: 10,
+  dailyNewLimit: 7,
   dailyReviewLimit: 20,
   meaningRevealSeconds: 5,
   sessionGoalMinutes: 5,
@@ -59,7 +59,7 @@ export async function getStudySettings(db: SQLiteDatabase): Promise<StudySetting
   const map = new Map(settings.map((item) => [item.key, item.value]));
 
   return {
-    dailyNewLimit: Number(map.get('daily_new_limit') ?? defaultSettings.dailyNewLimit),
+    dailyNewLimit: defaultSettings.dailyNewLimit,
     dailyReviewLimit: Number(map.get('daily_review_limit') ?? defaultSettings.dailyReviewLimit),
     meaningRevealSeconds: Number(map.get('meaning_reveal_seconds') ?? defaultSettings.meaningRevealSeconds),
     sessionGoalMinutes: Number(map.get('session_goal_minutes') ?? defaultSettings.sessionGoalMinutes),
@@ -76,7 +76,7 @@ export async function updateStudySettingsQuery(
   updates: Partial<StudySettings>
 ): Promise<StudySettings> {
   if (updates.dailyNewLimit !== undefined) {
-    await upsertSetting(db, 'daily_new_limit', String(updates.dailyNewLimit));
+    await upsertSetting(db, 'daily_new_limit', String(defaultSettings.dailyNewLimit));
   }
   if (updates.dailyReviewLimit !== undefined) {
     await upsertSetting(db, 'daily_review_limit', String(updates.dailyReviewLimit));
@@ -192,6 +192,17 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
     `,
     todayIso()
   );
+  const todayUnlocks = await db.getFirstAsync<{
+    free_new_unlocked_count: number;
+    rewarded_new_unlocked_count: number;
+  }>(
+    `
+      SELECT free_new_unlocked_count, rewarded_new_unlocked_count
+      FROM daily_unlocks
+      WHERE date = ?
+    `,
+    todayIso()
+  );
   const activeSession = await db.getFirstAsync<{
     id: string;
     status: string;
@@ -221,6 +232,7 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
         END as phase_total_items
       FROM sessions s
       WHERE s.status IN ('active', 'quiz')
+        AND s.session_type != 'library_review'
       ORDER BY started_at DESC
       LIMIT 1
     `
@@ -228,10 +240,14 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
   const totalWordCount = totalWords?.count ?? 0;
   const dueCount = dueToday?.count ?? 0;
   const newWordCount = newWords?.count ?? 0;
+  const todayFreeNewUnlocked = todayUnlocks?.free_new_unlocked_count ?? 0;
+  const todayRewardedNewUnlocked = todayUnlocks?.rewarded_new_unlocked_count ?? 0;
+  const todayRemainingFreeNew = Math.max(0, settings.dailyNewLimit - todayFreeNewUnlocked);
+  const totalAvailableNew = Math.min(newWordCount, todayRemainingFreeNew + todayRewardedNewUnlocked);
   const streakDays = await getStreakDays(db);
   const recommendedCount = activeSession
     ? activeSession.phase_total_items
-    : dueCount + Math.min(settings.dailyNewLimit, newWordCount);
+    : dueCount + totalAvailableNew;
   const todayReviewedCount = todayStats?.reviewed_count ?? 0;
   const todayNewCount = todayStats?.new_count ?? 0;
 
@@ -247,6 +263,11 @@ export async function getDashboardSnapshotQuery(db: SQLiteDatabase): Promise<Das
     streakDays,
     todayReviewedCount,
     todayNewCount,
+    dailyFreeNewLimit: settings.dailyNewLimit,
+    todayFreeNewUnlocked,
+    todayRewardedNewUnlocked,
+    todayRemainingFreeNew,
+    canUnlockExtraNewWords: !activeSession && todayRemainingFreeNew === 0 && todayRewardedNewUnlocked === 0 && newWordCount > 0,
     completedToday: todayReviewedCount + todayNewCount,
     activeSessionId: activeSession?.id ?? null,
     activeSessionPhase: activeSession ? (activeSession.status === 'quiz' ? 'quiz' : 'study') : null,
@@ -274,6 +295,7 @@ export async function getAppOverviewQuery(db: SQLiteDatabase): Promise<AppOvervi
       SELECT id
       FROM sessions
       WHERE status IN ('active', 'quiz')
+        AND session_type != 'library_review'
       ORDER BY started_at DESC
       LIMIT 1
     `

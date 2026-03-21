@@ -109,6 +109,22 @@ export async function getLibraryWordsRepository(query: LibraryQuery): Promise<Li
       WHERE p.word_id IS NOT NULL AND p.status != 'new'
     `
   );
+  const learningCount = await db.getFirstAsync<{ count: number }>(
+    `
+      SELECT COUNT(*) as count
+      FROM word_progress
+      WHERE status = 'learning'
+        AND is_suspended = 0
+    `
+  );
+  const reviewCount = await db.getFirstAsync<{ count: number }>(
+    `
+      SELECT COUNT(*) as count
+      FROM word_progress
+      WHERE status = 'review'
+        AND is_suspended = 0
+    `
+  );
   const totalFilteredCount = totalCount?.count ?? 0;
   const nextOffset = query.offset + items.length < totalFilteredCount ? query.offset + items.length : null;
 
@@ -117,8 +133,53 @@ export async function getLibraryWordsRepository(query: LibraryQuery): Promise<Li
     totalCount: totalFilteredCount,
     totalWords: totalWords?.count ?? 0,
     learnedCount: learnedCount?.count ?? 0,
+    learningCount: learningCount?.count ?? 0,
+    reviewCount: reviewCount?.count ?? 0,
     nextOffset,
   };
+}
+
+export async function getLibraryReviewCandidatesRepository(): Promise<WordCandidate[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<{
+    id: number;
+    english: string;
+    turkish: string;
+    sentence1: string | null;
+    sentence2: string | null;
+    sentence3: string | null;
+    sentence4: string | null;
+    sentence5: string | null;
+  }>(
+    `
+      SELECT
+        w.id,
+        w.english,
+        w.turkish,
+        w.sentence1,
+        w.sentence2,
+        w.sentence3,
+        w.sentence4,
+        w.sentence5
+      FROM word_progress p
+      INNER JOIN words w ON w.id = p.word_id
+      WHERE p.status IN ('review', 'learning')
+        AND p.is_suspended = 0
+      ORDER BY
+        CASE p.status
+          WHEN 'review' THEN 0
+          ELSE 1
+        END ASC,
+        RANDOM()
+    `
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    english: row.english,
+    turkish: row.turkish,
+    sentences: sentencesFromRow(row),
+  }));
 }
 
 export async function searchWordsRepository(query: string, limit = 20): Promise<WordListItem[]> {
@@ -238,7 +299,7 @@ export async function getNewWordCandidatesRepository(limit: number): Promise<Wor
       LEFT JOIN word_progress p ON p.word_id = w.id
       WHERE (p.word_id IS NULL OR p.status = 'new')
         AND (p.is_suspended = 0 OR p.is_suspended IS NULL)
-      ORDER BY w.id ASC
+      ORDER BY RANDOM()
       LIMIT ?
     `,
     limit

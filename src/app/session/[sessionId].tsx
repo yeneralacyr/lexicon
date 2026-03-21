@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { cancelAnimation, Easing, runOnJS, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import type { StudyCardPhase } from '@/components/session/study-card';
 import { StudyCardStack } from '@/components/session/study-card-stack';
@@ -11,6 +12,7 @@ import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, layout, spacing, type AppPalette } from '@/constants/theme';
 import { getSettings } from '@/modules/progress/progress.service';
 import { applySessionDecision, beginSessionQuiz } from '@/modules/review/review.engine';
+import { resolveSessionRoute } from '@/modules/sessions/session-routing';
 import { getSessionDetail } from '@/modules/sessions/sessions.service';
 import { useSessionStore } from '@/store/sessionStore';
 import { useAppTheme } from '@/theme/app-theme-provider';
@@ -28,7 +30,6 @@ export default function SessionScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardPhase, setCardPhase] = useState<StudyCardPhase>('word_only');
   const [countdownRemaining, setCountdownRemaining] = useState<number | null>(null);
-  const [countdownProgress, setCountdownProgress] = useState<number | null>(null);
   const [meaningRevealSeconds, setMeaningRevealSeconds] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [itemStartedAt, setItemStartedAt] = useState(() => Date.now());
@@ -36,6 +37,7 @@ export default function SessionScreen() {
   const [resetKey, setResetKey] = useState(0);
   const isTransitioningRef = useRef(false);
   const countdownDeadlineRef = useRef<number | null>(null);
+  const countdownProgress = useSharedValue(0);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +52,15 @@ export default function SessionScreen() {
 
       if (!nextSession) {
         router.replace('/today');
+        return;
+      }
+
+      if (nextSession.sessionType === 'library_review') {
+        router.replace(resolveSessionRoute({
+          id: nextSession.id,
+          phase: nextSession.phase,
+          sessionType: nextSession.sessionType,
+        }));
         return;
       }
 
@@ -91,20 +102,35 @@ export default function SessionScreen() {
     setItemStartedAt(Date.now());
     setCardPhase('word_only');
     setCountdownRemaining(null);
-    setCountdownProgress(null);
     setSubmitError(null);
     countdownDeadlineRef.current = null;
-  }, [activeItem?.id]);
+    cancelAnimation(countdownProgress);
+    countdownProgress.value = 0;
+  }, [activeItem?.id, countdownProgress]);
+
+  const handleCountdownExpired = useCallback(() => {
+    countdownDeadlineRef.current = null;
+    setCountdownRemaining(null);
+    setCardPhase((currentPhase) => (currentPhase === 'meaning_reveal' ? 'word_with_sentence' : currentPhase));
+  }, []);
 
   useEffect(() => {
     if (cardPhase !== 'meaning_reveal') {
       countdownDeadlineRef.current = null;
+      cancelAnimation(countdownProgress);
+      countdownProgress.value = 0;
       return;
     }
 
-    countdownDeadlineRef.current = Date.now() + meaningRevealSeconds * 1000;
+    const durationMs = meaningRevealSeconds * 1000;
+    countdownDeadlineRef.current = Date.now() + durationMs;
     setCountdownRemaining(meaningRevealSeconds);
-    setCountdownProgress(1);
+    countdownProgress.value = 1;
+    countdownProgress.value = withTiming(0, { duration: durationMs, easing: Easing.linear }, (finished) => {
+      if (finished) {
+        runOnJS(handleCountdownExpired)();
+      }
+    });
 
     const interval = setInterval(() => {
       if (!countdownDeadlineRef.current) {
@@ -114,22 +140,19 @@ export default function SessionScreen() {
       const remainingMs = countdownDeadlineRef.current - Date.now();
 
       if (remainingMs <= 0) {
-        setCardPhase('word_with_sentence');
-        setCountdownRemaining(null);
-        setCountdownProgress(null);
-        countdownDeadlineRef.current = null;
-        clearInterval(interval);
+        setCountdownRemaining(1);
         return;
       }
 
-      setCountdownRemaining(Math.max(1, Math.ceil(remainingMs / 1000)));
-      setCountdownProgress(Math.max(0, remainingMs / (meaningRevealSeconds * 1000)));
-    }, 100);
+      const nextRemaining = Math.max(1, Math.ceil(remainingMs / 1000));
+      setCountdownRemaining((currentValue) => (currentValue === nextRemaining ? currentValue : nextRemaining));
+    }, 250);
 
     return () => {
       clearInterval(interval);
+      cancelAnimation(countdownProgress);
     };
-  }, [cardPhase, meaningRevealSeconds]);
+  }, [cardPhase, countdownProgress, handleCountdownExpired, meaningRevealSeconds]);
 
   async function reloadSession() {
     if (!sessionId) {
@@ -192,7 +215,8 @@ export default function SessionScreen() {
     if (cardPhase === 'meaning_reveal') {
       countdownDeadlineRef.current = null;
       setCountdownRemaining(null);
-      setCountdownProgress(null);
+      cancelAnimation(countdownProgress);
+      countdownProgress.value = 0;
       setCardPhase('word_with_sentence');
     }
 
@@ -300,15 +324,11 @@ export default function SessionScreen() {
             width={stackWidth}
           />
 
-          <View style={styles.metaBlock}>
-            {submitError ? (
+          {submitError ? (
+            <View style={styles.metaBlock}>
               <Text style={styles.errorText}>{submitError}</Text>
-            ) : (
-              <TechnicalLabel color={colors.muted} style={styles.metaText}>
-                {getGuidanceText({ cardPhase, isSubmitting, countdownRemaining })}
-              </TechnicalLabel>
-            )}
-          </View>
+            </View>
+          ) : null}
         </View>
 
         {isWide ? (
@@ -328,30 +348,6 @@ export default function SessionScreen() {
 function resolveNextUnratedIndex(session: SessionDetail) {
   const firstUnratedIndex = session.items.findIndex((item) => !item.resultRating);
   return firstUnratedIndex === -1 ? Math.max(0, session.items.length - 1) : firstUnratedIndex;
-}
-
-function getGuidanceText({
-  cardPhase,
-  countdownRemaining,
-  isSubmitting,
-}: {
-  cardPhase: StudyCardPhase;
-  countdownRemaining: number | null;
-  isSubmitting: boolean;
-}) {
-  if (isSubmitting) {
-    return 'Kararın bu oturum için kaydediliyor...';
-  }
-
-  if (cardPhase === 'word_only') {
-    return 'Kelimeyi gör, anlamı hatırla ve karta dokun.';
-  }
-
-  if (cardPhase === 'meaning_reveal') {
-    return `${countdownRemaining ?? 0} saniye sonra cümle açılacak. Biliyorsan yukarı kaydır.`;
-  }
-
-  return '\u2190 Sonra tekrar    \u2191 Zaten biliyordum    Ezberledim \u2192';
 }
 
 function createStyles(colors: AppPalette) {
@@ -428,10 +424,6 @@ function createStyles(colors: AppPalette) {
       justifyContent: 'center',
       paddingHorizontal: spacing.lg,
       maxWidth: 420,
-    },
-    metaText: {
-      textAlign: 'center',
-      lineHeight: 22,
     },
     errorText: {
       fontFamily: fontFamilies.bodyMedium,

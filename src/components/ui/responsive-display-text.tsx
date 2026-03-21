@@ -53,7 +53,7 @@ export function ResponsiveDisplayText({
   ...props
 }: ResponsiveDisplayTextProps) {
   const { colors } = useAppTheme();
-  const metrics = useMemo(() => getResponsiveMetrics(children, variantConfig[variant]), [children, variant]);
+  const metrics = useMemo(() => getResponsiveMetrics(children, variant), [children, variant]);
   const styles = useMemo(() => createStyles(colors.primary), [colors.primary]);
 
   return (
@@ -78,9 +78,54 @@ export function ResponsiveDisplayText({
 
 function getResponsiveMetrics(
   text: string,
-  config: (typeof variantConfig)[ResponsiveDisplayVariant]
+  variant: ResponsiveDisplayVariant
 ) {
-  const length = text.trim().length;
+  const config = variantConfig[variant];
+  const normalizedText = text.trim();
+  const length = normalizedText.length;
+  const tokens = normalizedText.split(/\s+/).filter(Boolean);
+  const longestTokenLength = tokens.reduce((longest, token) => Math.max(longest, token.length), 0);
+  const isSingleWord = tokens.length <= 1;
+
+  if (variant === 'word' && isSingleWord) {
+    if (longestTokenLength <= 8) {
+      return {
+        fontSize: config.baseSize,
+        lineHeight: config.baseLineHeight,
+        letterSpacing: config.baseLetterSpacing,
+      };
+    }
+
+    if (longestTokenLength <= 10) {
+      return {
+        fontSize: 58,
+        lineHeight: 60,
+        letterSpacing: -2.6,
+      };
+    }
+
+    if (longestTokenLength <= 12) {
+      return {
+        fontSize: 52,
+        lineHeight: 54,
+        letterSpacing: -2.2,
+      };
+    }
+
+    if (longestTokenLength <= 15) {
+      return {
+        fontSize: 46,
+        lineHeight: 48,
+        letterSpacing: -1.8,
+      };
+    }
+
+    return {
+      fontSize: 40,
+      lineHeight: 42,
+      letterSpacing: -1.4,
+    };
+  }
 
   if (length <= 10) {
     return {

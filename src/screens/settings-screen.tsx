@@ -9,7 +9,7 @@ import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useAds } from '@/ads/provider';
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
 import { ActionButton } from '@/components/ui/action-button';
-import { ResponsiveDisplayText } from '@/components/ui/responsive-display-text';
+import { ScreenHero } from '@/components/ui/screen-hero';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, spacing, type AppPalette, type ThemeMode } from '@/constants/theme';
 import {
@@ -24,7 +24,6 @@ import { useAppTheme } from '@/theme/app-theme-provider';
 import type { AppOverview, StudySettings } from '@/types/db';
 import { formatShortDate } from '@/utils/dates';
 
-const newWordOptions = [5, 10, 15];
 const revealSecondOptions = [3, 5, 7];
 const themeModeOptions: { label: string; value: ThemeMode }[] = [
   { label: 'Otomatik', value: 'system' },
@@ -170,46 +169,15 @@ export default function SettingsScreen() {
     <FullscreenScrollScene
       dotOpacity={0.04}
       topSlot={
-        <View style={styles.hero}>
-          <TechnicalLabel style={styles.heroLabel}>Sistem Yapılandırması</TechnicalLabel>
-          <ResponsiveDisplayText style={styles.heroTitle} variant="hero">
-            Ayarlar
-          </ResponsiveDisplayText>
-          <Text style={styles.heroSubtitle}>
-            Hedeflerini, görünümü ve tekrar ritmini düzenleyerek öğrenme akışını kendine göre ayarla.
-          </Text>
-        </View>
+        <ScreenHero
+          eyebrow="Sistem yapılandırması"
+          subtitle="Hedeflerini, görünümü ve tekrar ritmini düzenleyerek öğrenme akışını kendine göre ayarla."
+          title="Ayarlar"
+        />
       }
       withTabInset>
       <View style={styles.grid}>
         <View style={styles.primaryColumn}>
-          <View style={styles.block}>
-            <TechnicalLabel style={styles.blockLabel}>Günlük tempo</TechnicalLabel>
-            <Text style={styles.blockTitle}>Yeni kelime hedefi</Text>
-            <View style={styles.segmentRow}>
-              {newWordOptions.map((option) => {
-                const active = settings?.dailyNewLimit === option;
-
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => {
-                      void patchSettings({ dailyNewLimit: option });
-                    }}
-                    style={[styles.segment, active && styles.segmentActive]}>
-                    <Text
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.8}
-                      numberOfLines={1}
-                      style={[styles.segmentText, active && styles.segmentTextActive]}>
-                      {String(option).padStart(2, '0')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
           <View style={styles.block}>
             <TechnicalLabel style={styles.blockLabel}>Günlük tekrar</TechnicalLabel>
             <Text style={styles.blockTitle}>Tekrar limiti</Text>
@@ -351,7 +319,7 @@ export default function SettingsScreen() {
                       ? privacyStatus.privacyOptionsRequired
                         ? 'Gizlilik seçeneklerini tekrar açarak reklam tercihini gözden geçirebilirsin.'
                         : privacyStatus.canRequestAds
-                          ? 'AdMob yalnızca doğal geçiş anlarında çalışır; çalışma ekranları reklam göstermez.'
+                          ? 'AdMob yalnızca kullanıcı ekstra yeni kelime açmak istediğinde devreye girer; çalışma ekranları reklam göstermez.'
                           : 'Consent alınmadan reklam talebi yapılmaz. Öğrenme akışı normal şekilde devam eder.'
                       : 'Expo Go, web veya AdMob modülü eklenmeden alınmış eski native build üzerinde reklam katmanı devreye girmez.'}
                   </Text>
@@ -464,25 +432,6 @@ function FooterStat({
 
 function createStyles(colors: AppPalette) {
   return StyleSheet.create({
-    hero: {
-      marginBottom: spacing.xxxl,
-      gap: spacing.md,
-    },
-    heroLabel: {
-      textAlign: 'left',
-    },
-    heroTitle: {
-      textAlign: 'left',
-      alignSelf: 'flex-start',
-      maxWidth: 320,
-    },
-    heroSubtitle: {
-      maxWidth: 420,
-      fontFamily: fontFamilies.bodyMedium,
-      fontSize: 15,
-      lineHeight: 24,
-      color: colors.muted,
-    },
     grid: {
       gap: spacing.xl,
     },

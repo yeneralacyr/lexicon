@@ -30,6 +30,12 @@ export function TopBar({
   return (
     <SafeAreaView edges={['top']} style={[styles.safeArea, bordered && styles.bordered]}>
       <View style={styles.row}>
+        {align === 'center' ? (
+          <View pointerEvents="none" style={styles.brandLayer}>
+            <Brand centered />
+          </View>
+        ) : null}
+
         <View style={[styles.side, align === 'center' && styles.sideCenter]}>
           {leftAction ? (
             <IconButton icon={leftAction.icon} onPress={leftAction.onPress} />
@@ -39,7 +45,7 @@ export function TopBar({
           {align === 'left' ? <Brand /> : null}
         </View>
 
-        {align === 'center' ? <Brand centered /> : <View style={styles.centerSpacer} />}
+        <View style={styles.centerSpacer} />
 
         <View style={[styles.side, styles.sideRight]}>
           {rightAction ? (
@@ -90,21 +96,28 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: spacing.md,
+      position: 'relative',
     },
     side: {
       flexDirection: 'row',
       alignItems: 'center',
-      minWidth: 72,
+      width: 72,
       gap: spacing.sm,
     },
     sideCenter: {
-      minWidth: 44,
+      width: 72,
     },
     sideRight: {
       justifyContent: 'flex-end',
     },
     centerSpacer: {
       flex: 1,
+    },
+    brandLayer: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      pointerEvents: 'none',
     },
     brand: {
       fontFamily: fontFamilies.displayBold,
@@ -116,7 +129,8 @@ function createStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
     },
     brandCentered: {
       fontSize: 22,
-      letterSpacing: 4,
+      letterSpacing: 3.6,
+      textAlign: 'center',
     },
     iconButton: {
       width: 40,

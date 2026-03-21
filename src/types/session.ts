@@ -1,7 +1,9 @@
 import type { Rating } from '@/types/progress';
 
 export type PromptType = 'recall' | 'mcq_meaning' | 'fill_blank';
+export type SessionType = 'daily' | 'review_only' | 'new_only' | 'library_review';
 export type SessionDecision = 'memorized_now' | 'show_again' | 'already_knew';
+export type LibraryReviewDecision = 'mastered' | 'keep_reviewing';
 export type SessionPhase = 'study' | 'quiz';
 
 export type SessionQueueItem = {
@@ -22,7 +24,7 @@ export type SessionDetail = {
   id: string;
   status: string;
   phase: SessionPhase;
-  sessionType: string;
+  sessionType: SessionType;
   startedAt: string;
   endedAt: string | null;
   totalItems: number;
@@ -70,7 +72,7 @@ export type SessionSummary = {
 export type ActiveSession = {
   id: string;
   phase: SessionPhase;
-  sessionType: string;
+  sessionType: SessionType;
   startedAt: string;
   totalItems: number;
   completedItems: number;

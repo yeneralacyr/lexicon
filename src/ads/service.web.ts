@@ -1,5 +1,3 @@
-import type { SessionSummary } from '@/types/session';
-
 import type { AdsPrivacyState } from '@/ads/types';
 
 const defaultPrivacyState: AdsPrivacyState = {
@@ -30,6 +28,10 @@ export async function openAdsPrivacyOptions() {
   return false;
 }
 
-export async function maybeShowSessionCompleteInterstitial(_: SessionSummary | null) {
+export async function primeExtraNewWordsRewardedAd() {
+  return false;
+}
+
+export async function maybeShowExtraNewWordsRewardedAd(_: number = 5) {
   return false;
 }

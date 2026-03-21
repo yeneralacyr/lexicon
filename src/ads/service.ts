@@ -1,13 +1,8 @@
-import type { AdsConsentInfo, InterstitialAd } from 'react-native-google-mobile-ads';
+import type { AdsConsentInfo, RewardedAd } from 'react-native-google-mobile-ads';
 
 import { admobConfig, getPlacementUnitId } from '@/ads/config';
-import {
-  getCompletedSessionCountRepository,
-  isSessionCompleteInterstitialCooldownPassedRepository,
-  setLastSessionCompleteInterstitialAtRepository,
-} from '@/ads/repository';
 import type { AdsPrivacyState } from '@/ads/types';
-import type { SessionSummary } from '@/types/session';
+import { grantRewardedNewWordsRepository } from '@/modules/progress/progress.repository';
 
 const defaultPrivacyState: AdsPrivacyState = {
   isAvailable: admobConfig.isNativeSupported,
@@ -22,9 +17,9 @@ const defaultPrivacyState: AdsPrivacyState = {
 let adsPrivacyState = defaultPrivacyState;
 let bootstrapPromise: Promise<AdsPrivacyState> | null = null;
 let mobileAdsInitialized = false;
-let interstitial: InterstitialAd | null = null;
-let interstitialLoaded = false;
-let interstitialLoading = false;
+let rewardedAd: RewardedAd | null = null;
+let rewardedLoaded = false;
+let rewardedLoading = false;
 let mobileAdsModulePromise: Promise<typeof import('react-native-google-mobile-ads')> | null = null;
 
 const listeners = new Set<(status: AdsPrivacyState) => void>();
@@ -67,41 +62,37 @@ async function mapConsentStatus(status: string): Promise<AdsPrivacyState['consen
   }
 }
 
-function createInterstitialRequestOptions() {
+function createRewardedRequestOptions() {
   return {
     requestNonPersonalizedAdsOnly: adsPrivacyState.requestNonPersonalizedAdsOnly,
   };
 }
 
-async function attachInterstitialListeners(ad: InterstitialAd) {
-  const { AdEventType } = await getMobileAdsModule();
+async function attachRewardedListeners(ad: RewardedAd) {
+  const { AdEventType, RewardedAdEventType } = await getMobileAdsModule();
 
-  ad.addAdEventListener(AdEventType.LOADED, () => {
-    interstitialLoaded = true;
-    interstitialLoading = false;
+  ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
+    rewardedLoaded = true;
+    rewardedLoading = false;
   });
 
   ad.addAdEventListener(AdEventType.ERROR, (error) => {
-    interstitialLoaded = false;
-    interstitialLoading = false;
-    interstitial = null;
+    rewardedLoaded = false;
+    rewardedLoading = false;
+    rewardedAd = null;
     setPrivacyState({
-      lastError: error?.message ?? 'Interstitial yüklenemedi.',
+      lastError: error?.message ?? 'Ödüllü reklam yüklenemedi.',
     });
     setTimeout(() => {
-      void primeSessionCompleteInterstitial();
+      void primeExtraNewWordsRewardedAd();
     }, 1500);
   });
 
-  ad.addAdEventListener(AdEventType.OPENED, () => {
-    void setLastSessionCompleteInterstitialAtRepository();
-  });
-
   ad.addAdEventListener(AdEventType.CLOSED, () => {
-    interstitialLoaded = false;
-    interstitialLoading = false;
-    interstitial = null;
-    void primeSessionCompleteInterstitial();
+    rewardedLoaded = false;
+    rewardedLoading = false;
+    rewardedAd = null;
+    void primeExtraNewWordsRewardedAd();
   });
 }
 
@@ -146,31 +137,28 @@ async function syncConsentState(consentInfo: AdsConsentInfo) {
   });
 }
 
-async function primeSessionCompleteInterstitial() {
+export async function primeExtraNewWordsRewardedAd() {
   if (!admobConfig.isNativeSupported || !adsPrivacyState.canRequestAds) {
     return;
   }
 
-  if (interstitialLoaded || interstitialLoading) {
+  if (rewardedLoaded || rewardedLoading) {
     return;
   }
 
   const mobileAdsModule = await getMobileAdsModule();
   const adUnitId = admobConfig.isTestMode
-    ? mobileAdsModule.TestIds.INTERSTITIAL
-    : getPlacementUnitId('session_complete_interstitial');
+    ? mobileAdsModule.TestIds.REWARDED
+    : getPlacementUnitId('extra_new_words_rewarded');
 
   if (!adUnitId) {
     return;
   }
 
-  interstitial = mobileAdsModule.InterstitialAd.createForAdRequest(
-    adUnitId,
-    createInterstitialRequestOptions()
-  );
-  await attachInterstitialListeners(interstitial);
-  interstitialLoading = true;
-  interstitial.load();
+  rewardedAd = mobileAdsModule.RewardedAd.createForAdRequest(adUnitId, createRewardedRequestOptions());
+  await attachRewardedListeners(rewardedAd);
+  rewardedLoading = true;
+  rewardedAd.load();
 }
 
 export async function bootstrapAds() {
@@ -190,7 +178,7 @@ export async function bootstrapAds() {
 
         if (consentInfo.canRequestAds) {
           await ensureMobileAdsInitialized();
-          await primeSessionCompleteInterstitial();
+          await primeExtraNewWordsRewardedAd();
         }
 
         return adsPrivacyState;
@@ -231,11 +219,11 @@ export async function openAdsPrivacyOptions() {
     await syncConsentState(consentInfo);
 
     if (consentInfo.canRequestAds) {
-      interstitial = null;
-      interstitialLoaded = false;
-      interstitialLoading = false;
+      rewardedAd = null;
+      rewardedLoaded = false;
+      rewardedLoading = false;
       await ensureMobileAdsInitialized();
-      await primeSessionCompleteInterstitial();
+      await primeExtraNewWordsRewardedAd();
     }
 
     return true;
@@ -247,43 +235,28 @@ export async function openAdsPrivacyOptions() {
   }
 }
 
-export async function maybeShowSessionCompleteInterstitial(summary: SessionSummary | null) {
-  if (!summary || !admobConfig.isNativeSupported || !adsPrivacyState.canRequestAds) {
+export async function maybeShowExtraNewWordsRewardedAd(amount = 5) {
+  if (!admobConfig.isNativeSupported || !adsPrivacyState.canRequestAds) {
     return false;
   }
 
-  if (summary.uniqueWords < admobConfig.thresholds.minimumUniqueWords) {
+  await primeExtraNewWordsRewardedAd();
+
+  if (!rewardedAd || !rewardedLoaded) {
     return false;
   }
 
-  const completedSessions = await getCompletedSessionCountRepository();
-
-  if (completedSessions < admobConfig.thresholds.minimumCompletedSessions) {
-    return false;
-  }
-
-  const cooldownPassed = await isSessionCompleteInterstitialCooldownPassedRepository(
-    admobConfig.thresholds.cooldownMinutes
-  );
-
-  if (!cooldownPassed) {
-    return false;
-  }
-
-  await primeSessionCompleteInterstitial();
-
-  if (!interstitial || !interstitialLoaded) {
-    return false;
-  }
-
-  const { AdEventType } = await getMobileAdsModule();
+  const { AdEventType, RewardedAdEventType } = await getMobileAdsModule();
 
   return new Promise<boolean>((resolve) => {
     let settled = false;
+    let rewardGranted = false;
+    let rewardPromise: Promise<void> | null = null;
 
     const cleanup = () => {
       unsubscribeClosed();
       unsubscribeError();
+      unsubscribeRewarded();
     };
 
     const finish = (value: boolean) => {
@@ -296,19 +269,42 @@ export async function maybeShowSessionCompleteInterstitial(summary: SessionSumma
       resolve(value);
     };
 
-    const unsubscribeClosed = interstitial!.addAdEventListener(AdEventType.CLOSED, () => {
-      finish(true);
+    const unsubscribeRewarded = rewardedAd!.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      () => {
+        rewardPromise = grantRewardedNewWordsRepository(amount)
+          .then(() => {
+            rewardGranted = true;
+          })
+          .catch((error) => {
+            setPrivacyState({
+              lastError: error instanceof Error ? error.message : 'Ödüllü yeni kelime hakkı kaydedilemedi.',
+            });
+            rewardGranted = false;
+          });
+      }
+    );
+
+    const unsubscribeClosed = rewardedAd!.addAdEventListener(AdEventType.CLOSED, () => {
+      if (rewardPromise) {
+        void rewardPromise.finally(() => {
+          finish(rewardGranted);
+        });
+        return;
+      }
+
+      finish(false);
     });
 
-    const unsubscribeError = interstitial!.addAdEventListener(AdEventType.ERROR, () => {
+    const unsubscribeError = rewardedAd!.addAdEventListener(AdEventType.ERROR, () => {
       finish(false);
     });
 
     try {
-      interstitial!.show();
+      rewardedAd!.show();
     } catch (error) {
       setPrivacyState({
-        lastError: error instanceof Error ? error.message : 'Interstitial gösterilemedi.',
+        lastError: error instanceof Error ? error.message : 'Ödüllü reklam gösterilemedi.',
       });
       finish(false);
     }

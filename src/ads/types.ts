@@ -1,4 +1,4 @@
-export type AdPlacement = 'session_complete_interstitial';
+export type AdPlacement = 'extra_new_words_rewarded';
 
 export type AdsPrivacyState = {
   isAvailable: boolean;
@@ -20,14 +20,9 @@ export type AdMobRuntimeConfig = {
   iosAppId: string;
   testDeviceIds: string[];
   units: {
-    sessionCompleteInterstitial: {
+    extraNewWordsRewarded: {
       android: string | null;
       ios: string | null;
     };
-  };
-  thresholds: {
-    minimumUniqueWords: number;
-    minimumCompletedSessions: number;
-    cooldownMinutes: number;
   };
 };

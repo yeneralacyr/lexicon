@@ -4,6 +4,7 @@ import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { FullscreenScrollScene } from '@/components/layout/fullscreen-scroll-scene';
+import { ScreenHero } from '@/components/ui/screen-hero';
 import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, radii, spacing, type AppPalette } from '@/constants/theme';
 import { searchWords } from '@/modules/words/words.service';
@@ -43,13 +44,9 @@ export default function SearchScreen() {
     <FullscreenScrollScene
       dotOpacity={0.1}
       withTabInset
-      contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       topSlot={
-        <View style={styles.hero}>
-          <TechnicalLabel color={colors.muted}>Hızlı arama</TechnicalLabel>
-          <Text style={styles.heroTitle}>Kelime ara</Text>
-        </View>
+        <ScreenHero eyebrow="Hızlı arama" title="Kelime ara" />
       }>
       <View style={styles.inputSection}>
         <View style={styles.inputShell}>
@@ -146,20 +143,6 @@ function mapSearchTag(word: WordListItem) {
 
 function createStyles(colors: AppPalette) {
   return StyleSheet.create({
-    content: {
-      paddingTop: spacing.sm,
-    },
-    hero: {
-      marginBottom: spacing.lg,
-      gap: spacing.xs,
-    },
-    heroTitle: {
-      fontFamily: fontFamilies.displayBold,
-      fontSize: 44,
-      lineHeight: 44,
-      letterSpacing: -1.8,
-      color: colors.primary,
-    },
     inputSection: {
       marginBottom: spacing.xxl,
     },

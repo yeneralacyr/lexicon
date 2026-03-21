@@ -16,6 +16,14 @@ export async function getActiveSession(): Promise<ActiveSession | null> {
   unsupported();
 }
 
+export async function getActiveStudySession(): Promise<ActiveSession | null> {
+  unsupported();
+}
+
+export async function getActiveLibraryReviewSession(): Promise<ActiveSession | null> {
+  unsupported();
+}
+
 export async function resumeActiveSession(): Promise<SessionDetail | null> {
   unsupported();
 }

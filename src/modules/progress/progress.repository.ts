@@ -7,7 +7,7 @@ import {
   getStudySettings,
   updateStudySettingsQuery,
 } from '@/db/queries';
-import type { AppOverview, ProgressExportPayload, SqliteExportRow, StudySettings } from '@/types/db';
+import type { AppOverview, DailyUnlocks, ProgressExportPayload, SqliteExportRow, StudySettings } from '@/types/db';
 import type { Rating, WordProgressRecord, WordStatus } from '@/types/progress';
 import type { WordCandidate } from '@/types/word';
 import { nowIso, plusDaysIso, todayIso } from '@/utils/dates';
@@ -31,6 +31,110 @@ export async function getStudySettingsRepository(): Promise<StudySettings> {
 export async function updateStudySettingsRepository(updates: Partial<StudySettings>): Promise<StudySettings> {
   const db = await getDatabase();
   return updateStudySettingsQuery(db, updates);
+}
+
+export async function getTodayDailyUnlocksOnDatabase(
+  db: SQLiteDatabase,
+  date = todayIso()
+): Promise<DailyUnlocks> {
+  const row = await db.getFirstAsync<{
+    date: string;
+    free_new_unlocked_count: number;
+    rewarded_new_unlocked_count: number;
+  }>(
+    `
+      SELECT date, free_new_unlocked_count, rewarded_new_unlocked_count
+      FROM daily_unlocks
+      WHERE date = ?
+    `,
+    date
+  );
+
+  return {
+    date,
+    freeNewUnlockedCount: row?.free_new_unlocked_count ?? 0,
+    rewardedNewUnlockedCount: row?.rewarded_new_unlocked_count ?? 0,
+  };
+}
+
+export async function getTodayDailyUnlocksRepository(date = todayIso()) {
+  const db = await getDatabase();
+  return getTodayDailyUnlocksOnDatabase(db, date);
+}
+
+export async function reserveDailyNewUnlocksOnDatabase(
+  db: SQLiteDatabase,
+  input: { freeCount: number; rewardedCount: number; date?: string }
+) {
+  const date = input.date ?? todayIso();
+  const current = await getTodayDailyUnlocksOnDatabase(db, date);
+
+  if (current.rewardedNewUnlockedCount < input.rewardedCount) {
+    throw new Error('Yeterli ekstra yeni kelime hakkı yok.');
+  }
+
+  const nextFreeCount = current.freeNewUnlockedCount + input.freeCount;
+  const nextRewardedCount = current.rewardedNewUnlockedCount - input.rewardedCount;
+
+  await db.runAsync(
+    `
+      INSERT INTO daily_unlocks (
+        date,
+        free_new_unlocked_count,
+        rewarded_new_unlocked_count
+      )
+      VALUES (?, ?, ?)
+      ON CONFLICT(date) DO UPDATE SET
+        free_new_unlocked_count = excluded.free_new_unlocked_count,
+        rewarded_new_unlocked_count = excluded.rewarded_new_unlocked_count
+    `,
+    date,
+    nextFreeCount,
+    nextRewardedCount
+  );
+
+  return {
+    date,
+    freeNewUnlockedCount: nextFreeCount,
+    rewardedNewUnlockedCount: nextRewardedCount,
+  };
+}
+
+export async function grantRewardedNewWordsOnDatabase(
+  db: SQLiteDatabase,
+  amount: number,
+  date = todayIso()
+) {
+  const current = await getTodayDailyUnlocksOnDatabase(db, date);
+  const nextRewardedCount = current.rewardedNewUnlockedCount + Math.max(0, amount);
+
+  await db.runAsync(
+    `
+      INSERT INTO daily_unlocks (
+        date,
+        free_new_unlocked_count,
+        rewarded_new_unlocked_count
+      )
+      VALUES (?, ?, ?)
+      ON CONFLICT(date) DO UPDATE SET
+        free_new_unlocked_count = excluded.free_new_unlocked_count,
+        rewarded_new_unlocked_count = excluded.rewarded_new_unlocked_count
+    `,
+    date,
+    current.freeNewUnlockedCount,
+    nextRewardedCount
+  );
+
+  return {
+    date,
+    freeNewUnlockedCount: current.freeNewUnlockedCount,
+    rewardedNewUnlockedCount: nextRewardedCount,
+  };
+}
+
+export async function grantRewardedNewWordsRepository(amount: number, date = todayIso()) {
+  const db = await getDatabase();
+  return grantRewardedNewWordsOnDatabase(db, amount, date);
 }
 
 export async function getDueWordCandidatesRepository(limit: number): Promise<WordCandidate[]> {
@@ -243,6 +347,97 @@ export async function applyWordRatingRepository(wordId: number, rating: Rating):
   return result.record;
 }
 
+export async function markWordMasteredOnDatabase(
+  db: SQLiteDatabase,
+  wordId: number,
+  minimumIntervalDays = 30
+): Promise<WordProgressRecord> {
+  const current = await getWordProgressRow(db, wordId);
+  const now = nowIso();
+  const intervalDays = Math.max(minimumIntervalDays, current?.interval_days ?? 0);
+  const repetitions = Math.max((current?.repetitions ?? 0) + 1, 4);
+  const masteryLevel = Math.max((current?.mastery_level ?? 0) + 1, 1);
+  const nextDueAt = plusDaysIso(intervalDays);
+  const seenCount = (current?.seen_count ?? 0) + 1;
+  const correctCount = (current?.correct_count ?? 0) + 1;
+  const wrongCount = current?.wrong_count ?? 0;
+  const lapses = current?.lapses ?? 0;
+
+  await db.runAsync(
+    `
+      INSERT INTO word_progress (
+        word_id,
+        status,
+        mastery_level,
+        ease_factor,
+        interval_days,
+        repetitions,
+        lapses,
+        seen_count,
+        correct_count,
+        wrong_count,
+        last_seen_at,
+        last_reviewed_at,
+        next_due_at,
+        is_favorite,
+        is_suspended,
+        updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(word_id) DO UPDATE SET
+        status = excluded.status,
+        mastery_level = excluded.mastery_level,
+        ease_factor = excluded.ease_factor,
+        interval_days = excluded.interval_days,
+        repetitions = excluded.repetitions,
+        lapses = excluded.lapses,
+        seen_count = excluded.seen_count,
+        correct_count = excluded.correct_count,
+        wrong_count = excluded.wrong_count,
+        last_seen_at = excluded.last_seen_at,
+        last_reviewed_at = excluded.last_reviewed_at,
+        next_due_at = excluded.next_due_at,
+        is_favorite = excluded.is_favorite,
+        is_suspended = excluded.is_suspended,
+        updated_at = excluded.updated_at
+    `,
+    wordId,
+    'mastered',
+    masteryLevel,
+    current?.ease_factor ?? 2.5,
+    intervalDays,
+    repetitions,
+    lapses,
+    seenCount,
+    correctCount,
+    wrongCount,
+    now,
+    now,
+    nextDueAt,
+    current?.is_favorite ?? 0,
+    current?.is_suspended ?? 0,
+    now
+  );
+
+  return {
+    wordId,
+    status: 'mastered',
+    masteryLevel,
+    easeFactor: current?.ease_factor ?? 2.5,
+    intervalDays,
+    repetitions,
+    lapses,
+    seenCount,
+    correctCount,
+    wrongCount,
+    lastSeenAt: now,
+    lastReviewedAt: now,
+    nextDueAt,
+    isFavorite: Boolean(current?.is_favorite ?? 0),
+    isSuspended: Boolean(current?.is_suspended ?? 0),
+  };
+}
+
 export async function toggleFavoriteRepository(wordId: number) {
   const db = await getDatabase();
   const current = await getWordProgressRow(db, wordId);
@@ -435,6 +630,7 @@ export async function exportProgressSnapshotRepository(): Promise<ProgressExport
     sessionItems: await readTableRows(db, 'session_items'),
     sessionQuizItems: await readTableRows(db, 'session_quiz_items'),
     dailyStats: await readTableRows(db, 'daily_stats'),
+    dailyUnlocks: await readTableRows(db, 'daily_unlocks'),
   };
 }
 
@@ -447,6 +643,7 @@ export async function resetUserDataRepository(): Promise<StudySettings> {
     await db.runAsync('DELETE FROM sessions');
     await db.runAsync('DELETE FROM word_progress');
     await db.runAsync('DELETE FROM daily_stats');
+    await db.runAsync('DELETE FROM daily_unlocks');
     await db.runAsync('DELETE FROM app_settings');
     await ensureDefaultSettings(db);
     await db.runAsync(

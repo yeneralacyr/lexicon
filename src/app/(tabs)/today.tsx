@@ -1,10 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { router } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { maybeShowExtraNewWordsRewardedAd } from '@/ads/service';
 import { TopBar } from '@/components/navigation/top-bar';
 import { ActionButton } from '@/components/ui/action-button';
 import { DotMatrixBackground } from '@/components/ui/dot-matrix-background';
@@ -13,6 +14,7 @@ import { TechnicalLabel } from '@/components/ui/technical-label';
 import { fontFamilies, spacing, type AppPalette } from '@/constants/theme';
 import { useFloatingTabInset } from '@/hooks/use-floating-tab-inset';
 import { buildDailySession, type SessionMode, getDashboardSnapshot } from '@/modules/review/review.engine';
+import { resolveSessionRoute } from '@/modules/sessions/session-routing';
 import { useSessionStore } from '@/store/sessionStore';
 import { useAppTheme } from '@/theme/app-theme-provider';
 import type { DashboardSnapshot } from '@/types/db';
@@ -25,6 +27,12 @@ export default function TodayScreen() {
   const setActiveSessionId = useSessionStore((state) => state.setActiveSessionId);
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [startingMode, setStartingMode] = useState<SessionMode | null>(null);
+  const [isUnlockingExtraNewWords, setIsUnlockingExtraNewWords] = useState(false);
+
+  const refreshSnapshot = useCallback(async () => {
+    const nextSnapshot = await getDashboardSnapshot();
+    setSnapshot(nextSnapshot);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -43,7 +51,7 @@ export default function TodayScreen() {
     return () => {
       active = false;
     };
-  }, [isFocused]);
+  }, [isFocused, refreshSnapshot]);
 
   async function handleStartSession(mode: SessionMode) {
     setStartingMode(mode);
@@ -56,14 +64,42 @@ export default function TodayScreen() {
       }
 
       setActiveSessionId(session.id);
-      router.push(session.phase === 'quiz' ? `/session/quiz/${session.id}` : `/session/${session.id}`);
+      router.push(resolveSessionRoute(session));
     } finally {
       setStartingMode(null);
     }
   }
 
+  async function handleUnlockExtraNewWords() {
+    if (isUnlockingExtraNewWords) {
+      return;
+    }
+
+    setIsUnlockingExtraNewWords(true);
+
+    try {
+      const rewarded = await maybeShowExtraNewWordsRewardedAd(5);
+
+      if (!rewarded) {
+        Alert.alert(
+          'Ekstra yeni kelime açılamadı',
+          'Şu anda ödüllü reklam yüklenemedi veya tamamlanmadı. Biraz sonra tekrar deneyebilirsin.'
+        );
+        return;
+      }
+
+      await refreshSnapshot();
+    } finally {
+      setIsUnlockingExtraNewWords(false);
+    }
+  }
+
   const recommendedCount = snapshot?.recommendedCount ?? 0;
-  const plannedNewCount = Math.max(0, recommendedCount - (snapshot?.dueToday ?? 0));
+  const availableUnlockedNewWords = Math.max(
+    0,
+    Math.min(snapshot?.newWords ?? 0, (snapshot?.todayRemainingFreeNew ?? 0) + (snapshot?.todayRewardedNewUnlocked ?? 0))
+  );
+  const plannedNewCount = availableUnlockedNewWords;
   const hasActiveSession = Boolean(snapshot?.activeSessionId);
   const activeSessionPhase = snapshot?.activeSessionPhase ?? null;
   const completedToday = snapshot?.completedToday ?? 0;
@@ -71,6 +107,10 @@ export default function TodayScreen() {
   const activeSessionTotalItems = snapshot?.activeSessionTotalItems ?? 0;
   const activeSessionRemaining = Math.max(0, activeSessionTotalItems - activeSessionCompletedItems);
   const activeSessionRemainingMinutes = Math.max(1, Math.ceil(activeSessionRemaining / 4));
+  const dueToday = snapshot?.dueToday ?? 0;
+  const hasReviewQueue = dueToday > 0;
+  const needsRewardUnlock =
+    !hasActiveSession && Boolean(snapshot?.canUnlockExtraNewWords) && (snapshot?.todayRewardedNewUnlocked ?? 0) === 0;
   const queueEmpty = !hasActiveSession && recommendedCount === 0;
   const progressPercent = hasActiveSession
     ? activeSessionTotalItems > 0
@@ -82,23 +122,35 @@ export default function TodayScreen() {
   const greeting = activeSessionPhase === 'quiz'
     ? `Final quiz seni bekliyor. ${activeSessionRemaining} kelime kaldı.`
     : hasActiveSession
-    ? `Yarım kalan oturumuna devam et. ${activeSessionRemaining} kart kaldı.`
-    : recommendedCount > 0
-      ? `Bugün ${recommendedCount} kartlık kısa bir tekrar turu hazır.`
-      : 'Bugün için planlanan kart kalmadı.';
+      ? `Yarım kalan oturumuna devam et. ${activeSessionRemaining} kart kaldı.`
+    : needsRewardUnlock
+      ? hasReviewQueue
+        ? 'Ücretsiz yeni kelime hakkın doldu. Tekrar kartların hazır; istersen reklam izleyip +5 yeni kelime daha açabilirsin.'
+        : 'Bugünkü ücretsiz yeni kelime hakkın doldu. İstersen reklam izleyip +5 yeni kelime açabilirsin.'
+      : (snapshot?.todayRewardedNewUnlocked ?? 0) > 0
+        ? `Bugün reklamla açtığın ${snapshot?.todayRewardedNewUnlocked ?? 0} ekstra yeni kelime hazır.`
+        : recommendedCount > 0
+          ? `Bugün ${recommendedCount} kartlık kısa bir tekrar turu hazır.`
+          : 'Bugün için planlanan kart kalmadı.';
   const primaryLabel = activeSessionPhase === 'quiz'
     ? startingMode
       ? 'Quiz açılıyor...'
       : "Quiz'e Devam Et"
     : hasActiveSession
-    ? startingMode
-      ? 'Oturum açılıyor...'
-      : 'Kaldığın Yerden Devam Et'
-    : queueEmpty
-      ? 'Bugünlük Tamam'
-      : startingMode === 'daily'
-        ? 'Oturum hazırlanıyor...'
-        : 'Bugünkü Oturumu Başlat';
+      ? startingMode
+        ? 'Oturum açılıyor...'
+        : 'Kaldığın Yerden Devam Et'
+    : needsRewardUnlock
+      ? hasReviewQueue
+        ? startingMode === 'daily'
+          ? 'Oturum hazırlanıyor...'
+          : 'Tekrar Oturumunu Başlat'
+        : 'Ücretsiz kota doldu'
+      : queueEmpty
+        ? 'Bugünlük Tamam'
+        : startingMode === 'daily'
+          ? 'Oturum hazırlanıyor...'
+          : 'Bugünkü Oturumu Başlat';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
@@ -153,6 +205,32 @@ export default function TodayScreen() {
                 <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, progressPercent))}%` }]} />
               </View>
             </View>
+
+            {!hasActiveSession && (needsRewardUnlock || (snapshot?.todayRewardedNewUnlocked ?? 0) > 0) ? (
+              <View style={styles.heroRewardSection}>
+                <TechnicalLabel color={colors.muted}>
+                  {needsRewardUnlock ? 'Ekstra yeni kelime' : 'Ekstra haklar'}
+                </TechnicalLabel>
+                <Text style={styles.heroRewardText}>
+                  {needsRewardUnlock
+                    ? hasReviewQueue
+                      ? 'Tekrar kartların hazır. İstersen bir reklam izleyip +5 yeni kelime daha açabilirsin.'
+                      : 'Ücretsiz yeni kelime hakkın doldu. İstersen bir reklam izleyip +5 yeni kelime açabilirsin.'
+                    : `${snapshot?.todayRewardedNewUnlocked ?? 0} ekstra yeni kelime hakkın hazır. İstersen şimdi kullanabilirsin.`}
+                </Text>
+                {needsRewardUnlock ? (
+                  <ActionButton
+                    disabled={isUnlockingExtraNewWords}
+                    label={isUnlockingExtraNewWords ? 'Reklam hazırlanıyor...' : 'Reklam izle, +5 yeni kelime aç'}
+                    onPress={() => {
+                      void handleUnlockExtraNewWords();
+                    }}
+                    style={styles.heroRewardButton}
+                    variant="secondary"
+                  />
+                ) : null}
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.ctaBlock}>
@@ -174,7 +252,7 @@ export default function TodayScreen() {
                   }}
                 />
                 <ModeLink
-                  disabled={(snapshot?.newWords ?? 0) === 0}
+                  disabled={availableUnlockedNewWords === 0}
                   label="Sadece yeni"
                   onPress={() => {
                     void handleStartSession('new_only');
@@ -188,15 +266,23 @@ export default function TodayScreen() {
                   ? 'Önce final quiz tamamlanmalı. Yeni oturum modu bundan sonra seçilebilir.'
                   : 'Aktif oturum açıkken mod değişmez. Önce kaldığın yerden devam et.'}
               </TechnicalLabel>
+            ) : needsRewardUnlock ? (
+              <TechnicalLabel color={colors.mutedSoft} style={styles.queueNote}>
+                Tekrar kartların ücretsizdir. Ekstra yeni kelime yalnızca istersen ödüllü reklamla açılır.
+              </TechnicalLabel>
             ) : queueEmpty ? (
               <TechnicalLabel color={colors.muted} style={styles.queueNote}>
-                Tekrar kuyruğun şu an boş. Yarın yeni kartlar hazırlandığında kaldığın yerden devam edeceksin.
+                {needsRewardUnlock
+                  ? 'Bugün ücretsiz yeni hakkın bitti. İstersen reklam izleyip +5 yeni kelime daha açabilirsin.'
+                  : 'Tekrar kuyruğun şu an boş. Yarın yeni kartlar hazırlandığında kaldığın yerden devam edeceksin.'}
               </TechnicalLabel>
             ) : (
               <TechnicalLabel color={colors.mutedSoft} style={styles.queueNote}>
                 {activeSessionPhase === 'quiz'
                   ? 'Quiz sonucu hangi kelimenin gerçekten öğrenildiğini belirler.'
-                  : 'Karta dokun, 5 saniye bekle, sonra sola tekrar, yukarı zaten biliyordum, sağa ezberledim.'}
+                  : (snapshot?.todayRewardedNewUnlocked ?? 0) > 0
+                    ? `${snapshot?.todayRemainingFreeNew ?? 0} ücretsiz yeni hak • ${snapshot?.todayRewardedNewUnlocked ?? 0} ekstra açık hak`
+                    : `${snapshot?.todayRemainingFreeNew ?? 0} ücretsiz yeni hak kaldı • tekrar kartları ücretsiz`}
               </TechnicalLabel>
             )}
           </View>
@@ -320,6 +406,26 @@ function createStyles(colors: AppPalette) {
     },
     heroMeta: {
       marginTop: spacing.xxl,
+    },
+    heroRewardSection: {
+      marginTop: spacing.xl,
+      paddingTop: spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: spacing.sm,
+      alignItems: 'center',
+    },
+    heroRewardText: {
+      fontFamily: fontFamilies.bodyMedium,
+      fontSize: 14,
+      lineHeight: 22,
+      color: colors.muted,
+      textAlign: 'center',
+      maxWidth: 420,
+    },
+    heroRewardButton: {
+      alignSelf: 'stretch',
+      marginTop: spacing.xs,
     },
     heroMetaRow: {
       flexDirection: 'row',

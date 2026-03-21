@@ -13,11 +13,22 @@ export type DashboardSnapshot = {
   streakDays: number;
   todayReviewedCount: number;
   todayNewCount: number;
+  dailyFreeNewLimit: number;
+  todayFreeNewUnlocked: number;
+  todayRewardedNewUnlocked: number;
+  todayRemainingFreeNew: number;
+  canUnlockExtraNewWords: boolean;
   completedToday: number;
   activeSessionId: string | null;
   activeSessionPhase: SessionPhase | null;
   activeSessionCompletedItems: number;
   activeSessionTotalItems: number;
+};
+
+export type DailyUnlocks = {
+  date: string;
+  freeNewUnlockedCount: number;
+  rewardedNewUnlockedCount: number;
 };
 
 export type AppOverview = {
@@ -52,4 +63,5 @@ export type ProgressExportPayload = {
   sessionItems: SqliteExportRow[];
   sessionQuizItems: SqliteExportRow[];
   dailyStats: SqliteExportRow[];
+  dailyUnlocks: SqliteExportRow[];
 };

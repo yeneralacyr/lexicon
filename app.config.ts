@@ -8,17 +8,17 @@ const IOS_SAMPLE_APP_ID = 'ca-app-pub-3940256099942544~1458002511';
 
 const androidAppId = process.env.ADMOB_ANDROID_APP_ID ?? (IS_PRODUCTION ? '' : ANDROID_SAMPLE_APP_ID);
 const iosAppId = process.env.ADMOB_IOS_APP_ID ?? (IS_PRODUCTION ? '' : IOS_SAMPLE_APP_ID);
-const sessionCompleteInterstitialAndroid =
-  process.env.ADMOB_INTERSTITIAL_SESSION_COMPLETE_ANDROID ?? '';
-const sessionCompleteInterstitialIos =
-  process.env.ADMOB_INTERSTITIAL_SESSION_COMPLETE_IOS ?? '';
+const rewardedExtraNewWordsAndroid =
+  process.env.ADMOB_REWARDED_EXTRA_NEW_WORDS_ANDROID ?? '';
+const rewardedExtraNewWordsIos =
+  process.env.ADMOB_REWARDED_EXTRA_NEW_WORDS_IOS ?? '';
 const testDeviceIds = (process.env.ADMOB_TEST_DEVICE_IDS ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
 const hasNativeAppIds = Boolean(androidAppId && iosAppId);
-const hasInterstitialUnits = Boolean(sessionCompleteInterstitialAndroid && sessionCompleteInterstitialIos);
-const isAdMobEnabled = IS_PRODUCTION ? hasNativeAppIds && hasInterstitialUnits : hasNativeAppIds;
+const hasRewardedUnits = Boolean(rewardedExtraNewWordsAndroid && rewardedExtraNewWordsIos);
+const isAdMobEnabled = IS_PRODUCTION ? hasNativeAppIds && hasRewardedUnits : hasNativeAppIds;
 
 const skAdNetworkItems = [
   'cstr6suwn9.skadnetwork',
@@ -105,7 +105,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adaptiveIcon: {
       backgroundColor: '#000000',
       foregroundImage: './assets/app_icon.png',
-    },
+    },  
     predictiveBackGestureEnabled: false,
   },
   web: {
@@ -151,8 +151,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       isProduction: IS_PRODUCTION,
       androidAppId,
       iosAppId,
-      interstitialSessionCompleteAndroid: sessionCompleteInterstitialAndroid,
-      interstitialSessionCompleteIos: sessionCompleteInterstitialIos,
+      rewardedExtraNewWordsAndroid,
+      rewardedExtraNewWordsIos,
       testDeviceIds,
     },
   },

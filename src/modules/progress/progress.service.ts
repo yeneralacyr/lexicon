@@ -1,6 +1,8 @@
 import {
   applyWordRatingRepository,
   exportProgressSnapshotRepository,
+  getTodayDailyUnlocksRepository,
+  grantRewardedNewWordsRepository,
   getAppOverviewRepository,
   getDueWordCandidatesRepository,
   getStudySettingsRepository,
@@ -16,6 +18,8 @@ export const getAppOverview = getAppOverviewRepository;
 export const getSettings = getStudySettingsRepository;
 export const updateSettings = updateStudySettingsRepository;
 export const getDueWordCandidates = getDueWordCandidatesRepository;
+export const getTodayDailyUnlocks = getTodayDailyUnlocksRepository;
+export const grantRewardedNewWords = grantRewardedNewWordsRepository;
 export const applyWordRating = applyWordRatingRepository;
 export const recordDailyStats = recordDailyStatsRepository;
 export const toggleFavorite = toggleFavoriteRepository;

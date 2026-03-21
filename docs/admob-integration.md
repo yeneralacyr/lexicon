@@ -2,7 +2,7 @@
 
 ## Placement
 
-- V1 placement only: `session complete -> Günü Bitir`
+- V1 placement only: `Today -> reklam izle -> +5 yeni kelime aç`
 - Study session, onboarding, quiz, library, search, word detail, and home remain ad-free
 
 ## Required build configuration
@@ -11,15 +11,15 @@ Fill these env variables before a production build:
 
 - `ADMOB_ANDROID_APP_ID`
 - `ADMOB_IOS_APP_ID`
-- `ADMOB_INTERSTITIAL_SESSION_COMPLETE_ANDROID`
-- `ADMOB_INTERSTITIAL_SESSION_COMPLETE_IOS`
+- `ADMOB_REWARDED_EXTRA_NEW_WORDS_ANDROID`
+- `ADMOB_REWARDED_EXTRA_NEW_WORDS_IOS`
 
 Optional:
 
 - `APP_ENV=development|production`
 - `ADMOB_TEST_DEVICE_IDS=device_id_1,device_id_2`
 
-In development, the app falls back to Google sample app IDs and `TestIds.INTERSTITIAL`.
+In development, the app falls back to Google sample app IDs and `TestIds.REWARDED`.
 
 ## Native build requirement
 
@@ -41,6 +41,6 @@ If you install the package after already creating a dev build, rebuild the nativ
 ## AdMob console follow-up
 
 - Register Android and iOS apps in AdMob
-- Create one interstitial ad unit for each platform for the `session complete` placement
+- Create one rewarded ad unit for each platform for the `extra new words` placement
 - Configure Privacy & Messaging for GDPR and ATT messaging
 - Update App Store privacy labels and Play Console ads/data safety declarations before release

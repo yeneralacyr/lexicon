@@ -1,9 +1,11 @@
 import {
+  getActiveLibraryReviewSessionRepository,
   beginSessionQuizRepository,
   completeSessionRepository,
   createSessionItemsRepository,
   createSessionRepository,
   getActiveSessionRepository,
+  getActiveStudySessionRepository,
   getSessionDetailRepository,
   getSessionQuizDetailRepository,
   getSessionSummaryRepository,
@@ -15,6 +17,8 @@ import {
 export const createSession = createSessionRepository;
 export const createSessionItems = createSessionItemsRepository;
 export const getActiveSession = getActiveSessionRepository;
+export const getActiveStudySession = getActiveStudySessionRepository;
+export const getActiveLibraryReviewSession = getActiveLibraryReviewSessionRepository;
 export const resumeActiveSession = resumeActiveSessionRepository;
 export const getSessionDetail = getSessionDetailRepository;
 export const getSessionQuizDetail = getSessionQuizDetailRepository;

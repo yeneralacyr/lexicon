@@ -3,6 +3,9 @@ import { getDashboardSnapshotQuery } from '@/db/queries';
 import {
   applyWordRatingOnDatabase,
   getDueWordCandidatesRepository,
+  getTodayDailyUnlocksOnDatabase,
+  markWordMasteredOnDatabase,
+  reserveDailyNewUnlocksOnDatabase,
   getStudySettingsRepository,
   recordDailyStatsOnDatabase,
 } from '@/modules/progress/progress.repository';
@@ -14,7 +17,8 @@ import {
   completeSessionOnDatabase,
   createSessionItemsOnDatabase,
   createSessionOnDatabase,
-  getActiveSessionRepository,
+  getActiveLibraryReviewSessionRepository,
+  getActiveStudySessionRepository,
   getSessionCompletedItemsOnDatabase,
   getSessionItemContextOnDatabase,
   getSessionQuizDetailRepository,
@@ -26,9 +30,14 @@ import {
   saveSessionQuizAnswerOnDatabase,
   setSessionCompletedItemsOnDatabase,
 } from '@/modules/sessions/sessions.repository';
-import { getNewWordCandidatesRepository } from '@/modules/words/words.repository';
+import { getLibraryReviewCandidatesRepository, getNewWordCandidatesRepository } from '@/modules/words/words.repository';
 import type { Rating } from '@/types/progress';
-import type { SessionDecision, SessionQuizDetail, SessionSummary } from '@/types/session';
+import type {
+  LibraryReviewDecision,
+  SessionDecision,
+  SessionQuizDetail,
+  SessionSummary,
+} from '@/types/session';
 import { normalizeSearchText } from '@/utils/normalize';
 import { createSessionId } from '@/utils/random';
 
@@ -90,7 +99,7 @@ function mixSessionEntries(reviewItems: SessionEntry[], newItems: SessionEntry[]
 }
 
 export async function buildDailySession(mode: SessionMode = 'daily'): Promise<BuildDailySessionResult | null> {
-  const activeSession = await getActiveSessionRepository();
+  const activeSession = await getActiveStudySessionRepository();
 
   if (activeSession) {
     return {
@@ -98,12 +107,21 @@ export async function buildDailySession(mode: SessionMode = 'daily'): Promise<Bu
       totalItems: activeSession.totalItems,
       resumed: true,
       phase: activeSession.phase,
+      sessionType: activeSession.sessionType,
     };
   }
 
   const settings = await getStudySettingsRepository();
+  const db = await getDatabase();
+  const unlocks = await getTodayDailyUnlocksOnDatabase(db);
+  const remainingFreeNew = Math.max(0, settings.dailyNewLimit - unlocks.freeNewUnlockedCount);
+  const availableRewardedNew = Math.max(0, unlocks.rewardedNewUnlockedCount);
+  const maxAvailableNewWords = remainingFreeNew + availableRewardedNew;
   const dueWords = mode === 'new_only' ? [] : await getDueWordCandidatesRepository(settings.dailyReviewLimit);
-  const newWords = mode === 'review_only' ? [] : await getNewWordCandidatesRepository(settings.dailyNewLimit);
+  const newWords =
+    mode === 'review_only' || maxAvailableNewWords === 0
+      ? []
+      : await getNewWordCandidatesRepository(maxAvailableNewWords);
   const shuffledDueWords = shuffleList(dueWords);
   const shuffledNewWords = shuffleList(newWords);
   const selectedWords = mixSessionEntries(
@@ -124,7 +142,8 @@ export async function buildDailySession(mode: SessionMode = 'daily'): Promise<Bu
   }
 
   const sessionId = createSessionId();
-  const db = await getDatabase();
+  const reservedFreeNewCount = Math.min(shuffledNewWords.length, remainingFreeNew);
+  const reservedRewardedNewCount = Math.max(0, shuffledNewWords.length - reservedFreeNewCount);
 
   await db.execAsync('BEGIN');
 
@@ -136,6 +155,13 @@ export async function buildDailySession(mode: SessionMode = 'daily'): Promise<Bu
       newItems: shuffledNewWords.length,
       reviewItems: shuffledDueWords.length,
     });
+
+    if (reservedFreeNewCount > 0 || reservedRewardedNewCount > 0) {
+      await reserveDailyNewUnlocksOnDatabase(db, {
+        freeCount: reservedFreeNewCount,
+        rewardedCount: reservedRewardedNewCount,
+      });
+    }
 
     await createSessionItemsOnDatabase(
       db,
@@ -163,6 +189,66 @@ export async function buildDailySession(mode: SessionMode = 'daily'): Promise<Bu
     totalItems: selectedWords.length,
     resumed: false,
     phase: 'study',
+    sessionType: mode,
+  };
+}
+
+export async function buildLibraryReviewSession(): Promise<BuildDailySessionResult | null> {
+  const activeSession = await getActiveLibraryReviewSessionRepository();
+
+  if (activeSession) {
+    return {
+      id: activeSession.id,
+      totalItems: activeSession.totalItems,
+      resumed: true,
+      phase: activeSession.phase,
+      sessionType: activeSession.sessionType,
+    };
+  }
+
+  const words = (await getLibraryReviewCandidatesRepository()).slice(0, 20);
+
+  if (words.length === 0) {
+    return null;
+  }
+
+  const db = await getDatabase();
+  const sessionId = createSessionId();
+
+  await db.execAsync('BEGIN');
+
+  try {
+    await createSessionOnDatabase(db, {
+      id: sessionId,
+      sessionType: 'library_review',
+      totalItems: words.length,
+      newItems: 0,
+      reviewItems: words.length,
+    });
+
+    await createSessionItemsOnDatabase(
+      db,
+      words.map((word, index) => ({
+        sessionId,
+        wordId: word.id,
+        orderIndex: index,
+        promptType: 'recall',
+        selectedSentenceIndex: null,
+      }))
+    );
+
+    await db.execAsync('COMMIT');
+  } catch (error) {
+    await db.execAsync('ROLLBACK');
+    throw error;
+  }
+
+  return {
+    id: sessionId,
+    totalItems: words.length,
+    resumed: false,
+    phase: 'study',
+    sessionType: 'library_review',
   };
 }
 
@@ -225,6 +311,69 @@ export async function applySessionDecision(params: {
 
     await db.execAsync('COMMIT');
     return { rating };
+  } catch (error) {
+    await db.execAsync('ROLLBACK');
+    throw error;
+  }
+}
+
+function mapLibraryReviewDecisionToRating(decision: LibraryReviewDecision): Rating {
+  return decision === 'mastered' ? 'easy' : 'again';
+}
+
+export async function applyLibraryReviewDecision(params: {
+  sessionId: string;
+  sessionItemId: number;
+  wordId: number;
+  decision: LibraryReviewDecision;
+  durationMs: number;
+}) {
+  const db = await getDatabase();
+
+  await db.execAsync('BEGIN');
+
+  try {
+    const sessionItem = await getSessionItemContextOnDatabase(db, params.sessionItemId);
+
+    if (!sessionItem || sessionItem.session_id !== params.sessionId || sessionItem.word_id !== params.wordId) {
+      throw new Error('Session item not found for library review.');
+    }
+
+    if (sessionItem.result_rating) {
+      await db.execAsync('ROLLBACK');
+      return null;
+    }
+
+    const rating = mapLibraryReviewDecisionToRating(params.decision);
+    const sessionProgress = await getSessionCompletedItemsOnDatabase(db, params.sessionId);
+
+    if (!sessionProgress) {
+      throw new Error('Library review session not found.');
+    }
+
+    await markSessionItemRatedOnDatabase(db, params.sessionItemId, rating, params.durationMs);
+
+    if (params.decision === 'mastered') {
+      await markWordMasteredOnDatabase(db, params.wordId, 30);
+    }
+
+    await recordDailyStatsOnDatabase(db, {
+      isNew: false,
+      rating,
+      durationMs: params.durationMs,
+    });
+
+    const nextCompletedItems = sessionProgress.completed_items + 1;
+    await setSessionCompletedItemsOnDatabase(db, params.sessionId, nextCompletedItems);
+
+    const completed = nextCompletedItems >= sessionProgress.total_items;
+
+    if (completed) {
+      await completeSessionOnDatabase(db, params.sessionId);
+    }
+
+    await db.execAsync('COMMIT');
+    return { completed, rating };
   } catch (error) {
     await db.execAsync('ROLLBACK');
     throw error;

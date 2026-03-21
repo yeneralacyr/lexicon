@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import Animated, { useAnimatedProps, type SharedValue } from 'react-native-reanimated';
 
 import { fontFamilies, type AppPalette } from '@/constants/theme';
 import { useAppTheme } from '@/theme/app-theme-provider';
 
 type CountdownRingProps = {
-  progress: number;
+  progress: SharedValue<number>;
   secondsRemaining: number;
 };
 
@@ -15,12 +16,18 @@ const STROKE_WIDTH = 6;
 const CENTER = SIZE / 2;
 const RADIUS = (SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export function CountdownRing({ progress, secondsRemaining }: CountdownRingProps) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const clampedProgress = Math.max(0, Math.min(1, progress));
-  const dashOffset = CIRCUMFERENCE * (1 - clampedProgress);
+  const animatedProps = useAnimatedProps(() => {
+    const clampedProgress = Math.max(0, Math.min(1, progress.value));
+
+    return {
+      strokeDashoffset: CIRCUMFERENCE * (1 - clampedProgress),
+    };
+  });
 
   return (
     <View style={styles.container}>
@@ -33,7 +40,8 @@ export function CountdownRing({ progress, secondsRemaining }: CountdownRingProps
           stroke={colors.surfaceContainerHighest}
           strokeWidth={STROKE_WIDTH}
         />
-        <Circle
+        <AnimatedCircle
+          animatedProps={animatedProps}
           cx={CENTER}
           cy={CENTER}
           fill="none"
@@ -43,7 +51,6 @@ export function CountdownRing({ progress, secondsRemaining }: CountdownRingProps
           originY={CENTER}
           stroke={colors.primary}
           strokeDasharray={`${CIRCUMFERENCE} ${CIRCUMFERENCE}`}
-          strokeDashoffset={dashOffset}
           strokeLinecap="round"
           strokeWidth={STROKE_WIDTH}
         />

@@ -1,5 +1,10 @@
 import type { BuildDailySessionResult, ReviewDashboardSnapshot } from '@/modules/review/review.types';
-import type { SessionDecision, SessionQuizDetail, SessionSummary } from '@/types/session';
+import type {
+  LibraryReviewDecision,
+  SessionDecision,
+  SessionQuizDetail,
+  SessionSummary,
+} from '@/types/session';
 
 export type SessionMode = 'daily' | 'review_only' | 'new_only';
 
@@ -12,6 +17,10 @@ export async function getDashboardSnapshot(): Promise<ReviewDashboardSnapshot> {
 }
 
 export async function buildDailySession(_: SessionMode = 'daily'): Promise<BuildDailySessionResult | null> {
+  unsupported();
+}
+
+export async function buildLibraryReviewSession(): Promise<BuildDailySessionResult | null> {
   unsupported();
 }
 
@@ -28,6 +37,16 @@ export async function applySessionDecision(_: {
 }
 
 export async function beginSessionQuiz(_: string) {
+  unsupported();
+}
+
+export async function applyLibraryReviewDecision(_: {
+  sessionId: string;
+  sessionItemId: number;
+  wordId: number;
+  decision: LibraryReviewDecision;
+  durationMs: number;
+}) {
   unsupported();
 }
 

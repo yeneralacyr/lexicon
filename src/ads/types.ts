@@ -12,6 +12,7 @@ export type AdsPrivacyState = {
 
 export type AdMobRuntimeConfig = {
   appEnv: string;
+  isEnabled: boolean;
   isProduction: boolean;
   isTestMode: boolean;
   isNativeSupported: boolean;

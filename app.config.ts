@@ -16,19 +16,9 @@ const testDeviceIds = (process.env.ADMOB_TEST_DEVICE_IDS ?? '')
   .split(',')
   .map((value) => value.trim())
   .filter(Boolean);
-
-if (IS_PRODUCTION) {
-  const missingKeys = [
-    !androidAppId && 'ADMOB_ANDROID_APP_ID',
-    !iosAppId && 'ADMOB_IOS_APP_ID',
-    !sessionCompleteInterstitialAndroid && 'ADMOB_INTERSTITIAL_SESSION_COMPLETE_ANDROID',
-    !sessionCompleteInterstitialIos && 'ADMOB_INTERSTITIAL_SESSION_COMPLETE_IOS',
-  ].filter(Boolean);
-
-  if (missingKeys.length > 0) {
-    throw new Error(`Missing required AdMob production env vars: ${missingKeys.join(', ')}`);
-  }
-}
+const hasNativeAppIds = Boolean(androidAppId && iosAppId);
+const hasInterstitialUnits = Boolean(sessionCompleteInterstitialAndroid && sessionCompleteInterstitialIos);
+const isAdMobEnabled = IS_PRODUCTION ? hasNativeAppIds && hasInterstitialUnits : hasNativeAppIds;
 
 const skAdNetworkItems = [
   'cstr6suwn9.skadnetwork',
@@ -83,6 +73,20 @@ const skAdNetworkItems = [
   '3qcr597p9d.skadnetwork',
 ] as const;
 
+const adMobPlugin: [string, any] | null = isAdMobEnabled
+  ? [
+      'react-native-google-mobile-ads',
+      {
+        androidAppId: androidAppId,
+        iosAppId: iosAppId,
+        delayAppMeasurementInit: true,
+        userTrackingUsageDescription:
+          'This identifier will be used to deliver personalized ads and measure ad performance in Lexicon.',
+        skAdNetworkItems,
+      },
+    ]
+  : null;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Lexicon',
@@ -97,7 +101,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     icon: './assets/app_icon.png',
   },
   android: {
-    package: 'com.lexicon.app',
+    package: 'com.lexiconapp.english',
     adaptiveIcon: {
       backgroundColor: '#000000',
       foregroundImage: './assets/app_icon.png',
@@ -131,17 +135,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
-    [
-      'react-native-google-mobile-ads',
-      {
-        androidAppId: androidAppId,
-        iosAppId: iosAppId,
-        delayAppMeasurementInit: true,
-        userTrackingUsageDescription:
-          'This identifier will be used to deliver personalized ads and measure ad performance in Lexicon.',
-        skAdNetworkItems,
-      },
-    ],
+    ...(adMobPlugin ? [adMobPlugin] : []),
   ],
   experiments: {
     typedRoutes: true,
@@ -153,6 +147,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     admob: {
       appEnv: APP_ENV,
+      isEnabled: isAdMobEnabled,
       isProduction: IS_PRODUCTION,
       androidAppId,
       iosAppId,

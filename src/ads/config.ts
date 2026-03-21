@@ -5,6 +5,7 @@ import type { AdMobRuntimeConfig } from '@/ads/types';
 
 type RawAdMobConfig = {
   appEnv?: string;
+  isEnabled?: boolean;
   isProduction?: boolean;
   androidAppId?: string;
   iosAppId?: string;
@@ -25,9 +26,10 @@ const hasGoogleMobileAdsNativeModule = Boolean(
 
 export const admobConfig: AdMobRuntimeConfig = {
   appEnv: raw.appEnv ?? 'development',
+  isEnabled: Boolean(raw.isEnabled),
   isProduction: Boolean(raw.isProduction),
-  isTestMode: !raw.isProduction,
-  isNativeSupported: isNativePlatform && !isExpoGo && hasGoogleMobileAdsNativeModule,
+  isTestMode: !raw.isProduction && Boolean(raw.isEnabled),
+  isNativeSupported: Boolean(raw.isEnabled) && isNativePlatform && !isExpoGo && hasGoogleMobileAdsNativeModule,
   androidAppId: raw.androidAppId ?? '',
   iosAppId: raw.iosAppId ?? '',
   testDeviceIds: raw.testDeviceIds ?? [],
